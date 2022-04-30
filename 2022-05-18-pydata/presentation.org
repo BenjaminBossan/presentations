@@ -1,0 +1,80 @@
+#+Title: skorch: A scikit-learn compatible neural network library that wraps PyTorch
+#+Author: Benjamin Bossan
+#+Date: 2022-05-18
+#+OPTIONS: toc:nil
+#+REVEAL_TITLE_SLIDE: %t
+#+MACRO: color @@html:<font color="$1">$2</font>@@
+#+REVEAL_EXTRA_CSS: ./reveal.js/css/theme/source/league.scss
+#+REVEAL_EXTRA_CSS: ./local.css
+#+OPTIONS: reveal_single_file:t
+#+OPTIONS: num:nil
+
+#+attr_html: :width 300px
+#+CAPTION:
+[[./assets/skorch_inv.svg]]
+* Introduction
+** About skorch
+#+attr_html: :width 400px
+#+CAPTION:
+- mature: first commit July 2017
+- 3 main contributors
+- used in production
+- many [[https://github.com/skorch-dev/skorch/tree/master/examples][examples]] and [[https://github.com/skorch-dev/skorch/tree/master/notebooks][notebooks]] in repository
+- comprehensive docs: https://skorch.readthedocs.io
+** Philosophy
+- sklearn API
+- hackable
+- don't hide PyTorch
+- don't reinvent the wheel
+** Reuse existing concepts instead of reinventing the wheel
+#+attr_html: :width 350px
+#+CAPTION:
+[[./assets/skorch_torch_sklearn_eco.svg]]
+** Advantages
+- reduce boilerplate code like train loop, logging metrics
+- only a handful of new concepts to learn
+- keep the complexity of code base low
+- avoid lock in:
+  + easily swap neural net with any sklearn estimator
+  + easily extract PyTorch modules and use them without skorch
+* Demo
+** What we will learn
+- Reduction of boilerplate code
+- Advantages of sklearn integration
+- How to easily customize skorch
+
+Some integrations
+- Gaussian Processes via GPyTorch
+- Powerful NLP models via Hugging Face
+** Easily create comprehensive CLI
+* Other goodies
+** Plethora of useful callbacks
+- learning rate scheduling
+- checkpointing
+- parameter freezing
+etc.
+** Handling of different data formats
+- numpy arrays
+- PyTorch tensors
+- PyTorch Datasets (most)
+- dict or list of arrays
+- pandas DataFrames
+- scipy sparse CSR matrices
+** More integrations
+- mixed precision training via [[https://github.com/huggingface/accelerate][Accelerate]]
+- parallelize hyper-parameter search via [[https://skorch.readthedocs.io/en/stable/user/parallelism.html][Dask]]
+- logging with [[https://www.tensorflow.org/tensorboard][TensorBoard]], [[https://mlflow.org/][MLflow]], [[https://neptune.ai/][Neptune.ai]], [[https://github.com/IDSIA/sacred][Sacred]]
+* Conclusion
+- When not to use skorch
+  * highly customized PyTorch code
+  * backend agnostic code (switch between PyTorch, TensorFlow, jax, …)
+  * there is no need at all for the sklearn API
+  * avoid a small performance overhead
+- When to use skorch
+  * gain sklearn API and all associated benefits like hyper-parameter search
+  * most PyTorch workflows just work
+  * avoid boilerplate, standardize code
+  * use included utilities and integrations
+* Questions?
+skorch: https://github.com/skorch-dev/skorch
+presentation: TODO
