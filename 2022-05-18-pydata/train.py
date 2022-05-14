@@ -1,4 +1,4 @@
-"""Simple training script for a MLP classifier.
+"""Simple training script for an MLP classifier.
 
 Requirements
 
@@ -8,43 +8,22 @@ pip install fire numpydoc
 
 Usage
 
-In this example, there are two variants, only the net ("net") and the
-net within an sklearn pipeline ("pipeline"). To get general help for
-each, run:
-
-```bash
-python train.py net -- --help
-python train.py pipeline -- --help
-```
-
-To get help for model-specific parameters, run:
+To get help, run:
 
 ```bash
 python train.py net --help
-python train.py pipeline --help
 ```
 
-### Training a Model
-
-Run
+To train the net, run
 
 ```bash
-python train.py net  # only the net
-python train.py pipeline  # net with pipeline
+python train.py net
 ```
 
-with the defaults.
-
-Example with just the net and some non-defaults:
+with the defaults. Example with some non-defaults:
 
 ```bash
-python train.py net --n_samples 1000 --output_file 'model.pkl' --lr 0.1 --max_epochs 5 --device 'cuda' --module__hidden_units 50 --module__nonlin 'torch.nn.RReLU(0.1, upper=0.4)' --callbacks__valid_acc__on_train --callbacks__valid_acc__name train_acc
-```
-
-Example with an sklearn pipeline:
-
-```bash
-python train.py pipeline --n_samples 1000 --net__lr 0.1 --net__module__nonlin 'torch.nn.LeakyReLU()' --scale__minmax__feature_range '(-2, 2)' --scale__normalize__norm l1
+python train.py net --n_samples 1000 --output_file 'model.pkl' --lr 0.1 --max_epochs 5 --module__hidden_units 50 --module__nonlin 'torch.nn.LeakyReLU(negative_slope=0.05)' --callbacks__valid_acc__on_train --callbacks__valid_acc__name train_acc
 ```
 
 """
@@ -54,11 +33,6 @@ import pickle
 import fire
 import numpy as np
 from sklearn.datasets import make_classification
-from sklearn.feature_selection import SelectKBest
-from sklearn.pipeline import FeatureUnion
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import Normalizer
 from skorch import NeuralNetClassifier
 import torch
 from torch import nn
@@ -160,23 +134,13 @@ def get_data(n_samples=100):
     return X, y
 
 
-def get_model(with_pipeline=False):
+def get_model():
     """Get a multi-layer perceptron model.
 
     Optionally, put it in a pipeline that scales the data.
 
     """
-    model = NeuralNetClassifier(MLPClassifier)
-    if with_pipeline:
-        model = Pipeline([
-            ('scale', FeatureUnion([
-                ('minmax', MinMaxScaler()),
-                ('normalize', Normalizer()),
-            ])),
-            ('select', SelectKBest(k=N_FEATURES)),  # keep input size constant
-            ('net', model),
-        ])
-    return model
+    return NeuralNetClassifier(MLPClassifier)
 
 
 def save_model(model, output_file):
@@ -203,7 +167,7 @@ def net(n_samples=100, output_file=None, **kwargs):
 
     """
 
-    model = get_model(with_pipeline=False)
+    model = get_model()
     # important: wrap the model with the parsed arguments
     parsed = parse_args(kwargs, defaults=DEFAULTS_NET)
     model = parsed(model)
@@ -215,38 +179,6 @@ def net(n_samples=100, output_file=None, **kwargs):
     save_model(model, output_file)
 
 
-def pipeline(n_samples=100, output_file=None, **kwargs):
-    """Train an MLP classifier in a pipeline on synthetic data.
-
-    The pipeline scales the input data before passing it to the net.
-
-    Note: This docstring is used to create the help for the CLI.
-
-    Parameters
-    ----------
-    n_samples : int (default=100)
-      Number of training samples
-
-    output_file : str (default=None)
-      If not None, file name used to save the model.
-
-    kwargs : dict
-      Additional model parameters.
-
-    """
-
-    model = get_model(with_pipeline=True)
-    # important: wrap the model with the parsed arguments
-    parsed = parse_args(kwargs, defaults=DEFAULTS_PIPE)
-    model = parsed(model)
-
-    X, y = get_data(n_samples=n_samples)
-    print("Training MLP classifier in a pipeline")
-    model.fit(X, y)
-
-    save_model(model, output_file)
-
-
 if __name__ == '__main__':
     # register 2 functions, "net" and "pipeline"
-    fire.Fire({'net': net, 'pipeline': pipeline})
+    fire.Fire({'net': net})
