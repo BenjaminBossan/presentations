@@ -11,7 +11,7 @@ Org files are rendered on github. To view it directly, click [this
 link](https://github.com/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation.org).
 
 View the accompanying notebook on
-[nbviewer](https://nbviewer.jupyter.org/github/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/notebook.ipynb).
+[nbviewer](https://nbviewer.jupyter.org/github/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation-pydata-meetup.ipynb).
 
 ## Running
 

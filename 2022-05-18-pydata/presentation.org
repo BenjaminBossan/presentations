@@ -76,5 +76,5 @@ etc.
   * avoid boilerplate, standardize code
   * use included utilities and integrations
 * Questions?
-skorch: https://github.com/skorch-dev/skorch
-presentation: TODO
+- skorch repository: https://github.com/skorch-dev/skorch
+- presentation: https://github.com/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation.org
