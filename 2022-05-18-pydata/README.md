@@ -4,19 +4,15 @@
 
 ## Opening
 
-To view the reveal.js presentation, download and open
-`presentation.html` in your favorite browser (tested on Firefox).
+The presentation is written as a org file, which is rendered directly on github. To view it, click [this link](https://github.com/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation.org).
 
-Org files are rendered on github. To view it directly, click [this
-link](https://github.com/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation.org).
+To view the reveal.js presentation, download and open`presentation.html` in your favorite browser (tested on Firefox).
 
-View the accompanying notebook on
-[nbviewer](https://nbviewer.jupyter.org/github/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation-pydata-meetup.ipynb).
+View the accompanying notebook on [nbviewer](https://nbviewer.jupyter.org/github/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation-pydata-meetup.ipynb).
 
 ## Running
 
-To compile from source, open and edit `presentation.org` and run
-`org-export-dispatch` in Emacs (C-c C-e v v).
+To compile from source, open and edit `presentation.org` and run`org-export-dispatch` in Emacs (C-c C-e v v).
 
 If emacs usage is not desired, edit `presentation.html` directly.
 
