@@ -46,7 +46,7 @@
 Some integrations
 - Gaussian Processes via GPyTorch
 - Powerful NLP models via Hugging Face
-** Easily create comprehensive CLI
+- Easily create comprehensive CLI with Fire
 * Other goodies
 ** Plethora of useful callbacks
 - learning rate scheduling
@@ -64,17 +64,17 @@ etc.
 - mixed precision training via [[https://github.com/huggingface/accelerate][Accelerate]]
 - parallelize hyper-parameter search via [[https://skorch.readthedocs.io/en/stable/user/parallelism.html][Dask]]
 - logging with [[https://www.tensorflow.org/tensorboard][TensorBoard]], [[https://mlflow.org/][MLflow]], [[https://neptune.ai/][Neptune.ai]], [[https://github.com/IDSIA/sacred][Sacred]]
-* Conclusion
-- When not to use skorch
-  * highly customized PyTorch code
-  * backend agnostic code (switch between PyTorch, TensorFlow, jax, …)
-  * there is no need at all for the sklearn API
-  * avoid a small performance overhead
-- When to use skorch
-  * gain sklearn API and all associated benefits like hyper-parameter search
-  * most PyTorch workflows just work
-  * avoid boilerplate, standardize code
-  * use included utilities and integrations
+* Summary
+** When not to use skorch
+- highly customized PyTorch code
+- backend agnostic code (switch between PyTorch, TensorFlow, jax, …)
+- there is no need at all for the sklearn API
+- avoid a small performance overhead
+** When to use skorch
+- gain sklearn API and all associated benefits like hyper-parameter search
+- most PyTorch workflows just work
+- avoid boilerplate, standardize code
+- use included utilities and integrations
 * Questions?
 - skorch repository: https://github.com/skorch-dev/skorch
-- presentation: https://github.com/BenjaminBossan/presentations/blob/master/2022-05-18-pydata/presentation.org
+- presentation: https://github.com/BenjaminBossan/presentations/
