@@ -3,6 +3,7 @@
 *.log
 tmp/
 
+.ipynb_checkpoints/
 *.py[cod]
 *.egg
 *.pkl
