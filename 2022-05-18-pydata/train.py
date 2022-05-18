@@ -11,19 +11,20 @@ Usage
 To get help, run:
 
 ```bash
-python train.py net --help
+python train.py --help
+python train.py -- --help
 ```
 
 To train the net, run
 
 ```bash
-python train.py net
+python train.py
 ```
 
 with the defaults. Example with some non-defaults:
 
 ```bash
-python train.py net --n_samples 1000 --output_file 'model.pkl' --lr 0.1 --max_epochs 5 --module__hidden_units 50 --module__nonlin 'torch.nn.LeakyReLU(negative_slope=0.05)' --callbacks__valid_acc__on_train --callbacks__valid_acc__name train_acc
+python train.py --n_samples 1000 --output_file 'model.pkl' --lr 0.1 --max_epochs 15 --module__hidden_units 50 --module__nonlin 'torch.nn.LeakyReLU(negative_slope=0.05)' --callbacks__valid_acc__on_train --callbacks__valid_acc__name train_acc
 ```
 
 """
@@ -55,13 +56,6 @@ N_CLASSES = 2
 DEFAULTS_NET = {
     'batch_size': 256,
     'module__hidden_units': 30,
-}
-
-# custom defaults for pipeline
-DEFAULTS_PIPE = {
-    'scale__minmax__feature_range': (-1, 1),
-    'net__batch_size': 256,
-    'net__module__hidden_units': 30,
 }
 
 
@@ -116,10 +110,11 @@ class MLPClassifier(nn.Module):
             sequence.append(nn.Dropout(self.dropout))
 
         sequence = sequence[:-2]
+        sequence.append(nn.Softmax(dim=-1))
         self.sequential = nn.Sequential(*sequence)
 
     def forward(self, X):
-        return nn.Softmax(dim=-1)(self.sequential(X))
+        return self.sequential(X)
 
 
 def get_data(n_samples=100):
@@ -153,7 +148,7 @@ def save_model(model, output_file):
     print("Saved model to file '{}'.".format(output_file))
 
 
-def net(n_samples=100, output_file=None, **kwargs):
+def train(n_samples=100, output_file=None, **kwargs):
     """Train an MLP classifier on synthetic data.
 
     n_samples : int (default=100)
@@ -173,7 +168,6 @@ def net(n_samples=100, output_file=None, **kwargs):
     model = parsed(model)
 
     X, y = get_data(n_samples=n_samples)
-    print("Training MLP classifier")
     model.fit(X, y)
 
     save_model(model, output_file)
@@ -181,4 +175,4 @@ def net(n_samples=100, output_file=None, **kwargs):
 
 if __name__ == '__main__':
     # register 2 functions, "net" and "pipeline"
-    fire.Fire({'net': net})
+    fire.Fire(train)
