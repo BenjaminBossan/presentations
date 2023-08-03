@@ -1,0 +1,342 @@
+#+Title: Extend your scikit-learn workflow with 🤗 Hugging Face and skorch
+#+Author: Benjamin Bossan
+#+Date: 2023-09-14
+#+OPTIONS: toc:nil
+#+REVEAL_TITLE_SLIDE: %t
+#+MACRO: color @@html:<font color="$1">$2</font>@@
+#+REVEAL_EXTRA_CSS: ./reveal.js/css/theme/source/league.scss
+#+REVEAL_EXTRA_CSS: ./local.css
+#+REVEAL_SLIDE_FOOTER:
+#+OPTIONS: reveal_single_file:t
+#+OPTIONS: num:nil
+
+* Introduction
+** Extend your scikit-learn workflow with 🤗 Hugging Face and skorch
+TODO: outline
+- Integrations
+link to presentation: https://github.com/BenjaminBossan/presentations
+** About scikit-learn
+#+attr_html: :width 450px
+#+CAPTION:
+[[./assets/scikit-learn.png]]
+** About 🤗 Hugging Face
+#+attr_html: :width 500px
+#+CAPTION:
+[[./assets/hf.png]]
+** About 🤗 Hugging Face
+We're going to look at:
+1. transformers
+2. tokenizers
+3. PEFT
+4. accelerate
+5. hub
+6. safetensors
+** About skorch
+#+attr_html: :width 400px
+#+CAPTION:
+- mature: first commit July 2017
+- deeply integrates scikit-learn and PyTorch (but no tensorflow etc.)
+- many [[https://github.com/skorch-dev/skorch/tree/master/examples][examples]] and [[https://github.com/skorch-dev/skorch/tree/master/notebooks][notebooks]] in repository
+- comprehensive docs: https://skorch.readthedocs.io
+** About skorch
+#+attr_html: :width 450px
+#+CAPTION:
+[[./assets/skorch_torch_sklearn_eco.svg]]
+* Transformers
+** Intro
+- most well known Hugging Face package
+- used predominantly for /transformers/-based pretrained models
+  + BERT, GPT, Falcon, Llama 2, etc.
+- Also non-transformers models
+  + computer vision models
+  + other types of language models (RWKV)
+  + and many more
+** Fine-tuning a BERT model -- PyTorch module
+#+BEGIN_SRC python
+from transformers import AutoModelForSequenceClassification
+
+class BertModule(nn.Module):
+    def __init__(self, name, num_labels):
+        super().__init__()
+        self.num_labels = num_labels
+        self.bert = AutoModelForSequenceClassification.from_pretrained(
+            name, num_labels=self.num_labels
+        )
+
+    def forward(self, **kwargs):
+        pred = self.bert(**kwargs)
+        return pred.logits
+#+END_SRC
+** Fine-tuning a BERT model -- skorch code
+#+BEGIN_SRC python
+from sklearn.metrics import accuracy_score
+from sklearn.pipeline import Pipeline
+from skorch import NeuralNetClassifier
+from skorch.callbacks import EpochScoring
+
+X_train, y_train = ...
+model_name = "distilbert-base-uncased"
+
+pipeline = Pipeline([
+    ('tokenizer', HuggingfacePretrainedTokenizer(model_name)),
+    ('net', NeuralNetClassifier(
+        BertModule,
+        module__name=model_name,
+        module__num_labels=len(set(y_train)),
+        criterion=nn.CrossEntropyLoss,
+        callbacks=[EpochScoring(scoring='roc_auc', lower_is_better=False)],
+    )),
+])
+#+END_SRC
+** Fine-tuning a BERT model -- training and inference
+#+begin_src python
+pipeline.fit(X_train, y_train)
+
+# prints
+  epoch    train_loss    valid_acc    valid_loss       dur
+-------  ------------  -----------  ------------  --------
+      1        1.1628       0.8338        0.5839  179.8571
+      2        0.3709       0.8751        0.4214  178.7779
+      3        0.1523       0.8910        0.3945  178.4507
+
+y_pred = pipeline.predict(X_test)
+print(accuracy_score(y_test, y_pred))
+#+end_src
+** Fine-tuning a BERT model -- grid search
+#+begin_src python
+from sklearn import GridSearchCV
+
+params = {
+    "module__name": ["distilbert-base-uncased", "bert-base-cased"],
+    "optimizer": [torch.optim.SGD, torch.optim.Adam],
+    "lr": [0.01, 3e-4],
+    "max_epochs": [10, 20],
+}
+search = GridSearchCV(pipeline, params)
+search.fit(X_train, y_train)
+#+end_src
+** Fine-tuning a vision transformer model -- feature extraction
+#+begin_src python
+from sklearn.base import BaseEstimator, TransformerMixin
+from transformers import ViTFeatureExtractor, ViTForImageClassification
+
+class FeatureExtractor(BaseEstimator, TransformerMixin):
+    def __init__(self, model_name, device='cpu'):
+        self.model_name = model_name
+        self.device = device
+
+    def fit(self, X, y=None, **fit_params):
+        self.extractor_ = ViTFeatureExtractor.from_pretrained(
+            self.model_name, device=self.device,
+        )
+        return self
+
+    def transform(self, X):
+        return self.extractor_(X, return_tensors='pt')['pixel_values']
+
+class VitModule(nn.Module):
+    # same idea as before
+#+end_src
+** Fine-tuning a vision transformer model -- skorch code
+#+begin_src python
+vit_model = "google/vit-base-patch32-224-in21k"
+
+pipeline = Pipeline([
+    ('feature_extractor', FeatureExtractor(
+        vit_model,
+        device=device,
+    )),
+    ('net', NeuralNetClassifier(
+        VitModule,
+        module__model_name=vit_model,
+        module__num_classes=len(set(y_train)),
+        criterion=nn.CrossEntropyLoss,
+        device=device,
+    )),
+])
+pipeline.fit(X_train, y_train)
+#+end_src
+** Further reading
+- [[https://huggingface.co/docs/transformers/index][🤗 Transformers]]
+- [[https://skorch.readthedocs.io/en/stable/user/callbacks.html][Callbacks]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Basic_Usage.ipynb#Usage-with-sklearn-GridSearchCV][Grid search]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Fine-tuning BERT]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_VisionTransformer.ipynb][Fine-tuning ViT]]
+* Tokenizers
+** Intro
+- working with text often requires tokenization of the text
+- 🤗 tokenizers provides wide range of techniques and pretrained tokenizers (BPE, word piece, ...)
+- not only tokenization, but also truncation, padding, etc.
+- works seemlessly with 🤗 transformers but also independently
+** ~HuggingfacePretrainedTokenizer~
+Load a pretrained tokenizer wrapped inside an sklearn transformer.
+#+begin_src python
+from skorch.hf import HuggingfacePretrainedTokenizer
+
+hf_tokenizer = HuggingfacePretrainedTokenizer('bert-base-uncased')
+data = ['hello there', 'this is a text']
+hf_tokenizer.fit(data)  # only loads the model
+hf_tokenizer.transform(data)
+# returns
+{
+    'input_ids': tensor([[ 101, 7592, 2045,  102,    0, ...]]),
+    'attention_mask': tensor([[1, 1, 1, 1, 0, ...]]),
+}
+#+end_src
+** ~HuggingfacePretrainedTokenizer~ -- training
+Use hyper parameters from pretrained tokenizer to fit on your own data
+#+begin_src python
+hf_tokenizer = HuggingfacePretrainedTokenizer(
+    'bert-base-uncased', vocab_size=12345, train=True
+)
+data = ...
+hf_tokenizer.fit(data)  # fits new tokenizer on data
+hf_tokenizer.transform(data)
+#+end_src
+** ~HuggingfaceTokenizer~
+Build your very own tokenizer
+#+begin_src python
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from tokenizers.normalizers import Lowercase, StripAccents
+from tokenizers.pre_tokenizers import Whitespace
+
+tokenizer = HuggingfaceTokenizer(
+    model__unk_token="[UNK]",
+    tokenizer=Tokenizer,
+    tokenizer__model=WordLevel,
+    trainer='auto',
+    trainer__vocab_size=1000,
+    trainer__special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"],
+    normalizer=Lowercase,
+    pre_tokenizer=Whitespace,
+)
+tokenizer.fit(data)
+#+end_src
+** ~HuggingfaceTokenizer~ -- grid search
+#+begin_src python
+pipeline = Pipeline([
+    ('tokenize', tokenizer),
+    ('net', NeuralNetClassifier(BertModule, ...)),
+])
+
+params = {
+    'tokenize__tokenizer': [Tokenizer],
+    'tokenize__tokenizer__model': [WordLevel],
+    'tokenize__model__unk_token': ["[UNK]"],
+    'tokenize__trainer__special_tokens': [["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]],
+    "tokenize__trainer__vocab_size": [500, 1000],
+    "tokenize__normalizer": [Lowercase, StripAccents],
+}
+search = GridSearchCV(pipeline, params, refit=False)
+search.fit(X, y)
+#+end_src
+** Further reading
+- [[https://huggingface.co/docs/tokenizers/index][🤗 Tokenizers]]
+- [[https://skorch.readthedocs.io/en/stable/user/huggingface.html#tokenizers][skorch tokenizers docs]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Example notebook]]
+* PEFT: Parameter efficient fine-tuning
+** Intro
+- [[https://github.com/huggingface/peft][PEFT]] implements several techniques to fine-tune models in an efficient manner
+- Some techniques are specific to language models and rely on modifying the input (not covered)
+- Other techniques, such as LoRA, work more generally
+** LoRA
+TODO: maybe quick primer on LoRA
+** Training a PEFT model -- setup
+#+begin_src python
+class MLP(nn.Module):
+    def __init__(self, num_units_hidden=2000):
+        super().__init__()
+        self.seq = nn.Sequential(
+            nn.Linear(20, num_units_hidden),
+            nn.ReLU(),
+            nn.Linear(num_units_hidden, num_units_hidden),
+            nn.ReLU(),
+            nn.Linear(num_units_hidden, 2),
+            nn.LogSoftmax(dim=-1),
+        )
+
+    def forward(self, X):
+        return self.seq(X)
+#+end_src
+** Training a PEFT model
+#+begin_src python
+import peft
+
+# to show potential candidates for target modules
+# print([(n, type(m)) for n, m in MLP().named_modules()])
+config = peft.LoraConfig(
+    r=8,
+    target_modules=["seq.0", "seq.2"],
+    modules_to_save=["seq.4"],
+)
+peft_model = peft.get_peft_model(MLP(), config)
+
+net = NeuralNetClassifier(peft_model, ...)
+net.fit(X, y)
+#+end_src
+** Hyper-parameter search with PEFT
+#+begin_src python
+from sklearn.model_selection import RandomizedSearchCV
+
+def create_peft_model(target_modules, r=8, **kwargs):
+    config = peft.LoraConfig(
+        r=r, target_modules=target_modules, modules_to_save=["seq.4"]
+    )
+    model = MLP(**kwargs)
+    return peft.get_peft_model(model, config)
+
+params = {
+    "module__r": [4, 8, 16],
+    "module__target_modules": [["seq.0"], ["seq.2"], ["seq.0", "seq.2"]],
+    "module__num_units_hidden": [1000, 2000],
+}
+search = RandomizedSearchCV(net, params, n_iter=20, random_state=0)
+search.fit(X, y)
+#+end_src
+** Saving the PEFT model
+#+begin_src python
+best_skorch_model = search.best_estimator_
+peft_model = best_skorch_model.module_
+peft_model.save_pretrained(dir_name)
+#+end_src
+
+Only saves the extra LoRA parameters
+
+#+begin_src bash
+     478 adapter_config.json
+      88 README.md
+  145731 adapter_model.bin
+     ---
+16340459 full_model.bin
+#+end_src
+** Further reading
+- [[https://huggingface.co/docs/peft/index][🤗 PEFT]]
+- [[https://huggingface.co/docs/peft/developer_guides/custom_models][Using PEFT with custom models]]
+- [[https://nbviewer.org/gist/BenjaminBossan/a6199e4efdfd6790b67f5829a86df018][Example notebook]]
+* Accelerate
+** Intro
+** Example
+** Further reading
+* Hugging Face Hub
+** Intro
+** Example
+** Further reading
+* Safetensors
+** Intro
+** Example
+** Further reading
+* Large language models
+** Intro
+** ~ZeroShotClassifier~
+** Grid search
+** ~FewShotClassifier~
+** When to use
+** Further reading
+* Conclusion
+** TODO
+mention that those different techniques can be combined
+** Links:
+- Hugging Face
+- skorch: https://github.com/skorch-dev/skorch
+- presentation: https://github.com/BenjaminBossan/presentations
