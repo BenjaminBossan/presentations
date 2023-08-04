@@ -314,6 +314,7 @@ Only saves the extra LoRA parameters
 - [[https://huggingface.co/docs/peft/index][🤗 PEFT]]
 - [[https://huggingface.co/docs/peft/developer_guides/custom_models][Using PEFT with custom models]]
 - [[https://nbviewer.org/gist/BenjaminBossan/a6199e4efdfd6790b67f5829a86df018][Example notebook]]
+- [[https://nbviewer.org/gist/BenjaminBossan/bb987fa121f8aa717ddc2a8cfe5adb7b][Bonus notebook: PEFT with 8bit quantization]]
 * Accelerate
 ** Intro
 ** Example
