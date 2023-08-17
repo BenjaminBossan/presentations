@@ -317,8 +317,52 @@ Only saves the extra LoRA parameters
 - [[https://nbviewer.org/gist/BenjaminBossan/bb987fa121f8aa717ddc2a8cfe5adb7b][Bonus notebook: PEFT with 8bit quantization]]
 * Accelerate
 ** Intro
-** Example
+- [[https://github.com/huggingface/accelerate][accelerate]] contains many utilities around making training and inference more efficient
+- Most prominently, it facilitates distributed training ([[https://pytorch.org/docs/stable/notes/ddp.html][DDP]], [[https://huggingface.co/docs/accelerate/usage_guides/fsdp][FSDP]], [[https://huggingface.co/docs/accelerate/usage_guides/deepspeed][DeepSpeed]], etc.)
+- Also contains other utilities that facilitate usage of [[https://huggingface.co/docs/accelerate/quicktour#mixed-precision-training][mixed precision]] (FP16, BF16), [[https://huggingface.co/docs/accelerate/quicktour#gradient-accumulation][gradient accumulation]], etc.
+** Automatic mixed precision
+#+begin_src python
+from accelerate import Accelerator
+from skorch import NeuralNet
+from skorch.hf import AccelerateMixin
+
+class AcceleratedNet(AccelerateMixin, NeuralNet):
+    """NeuralNet with accelerate support"""
+
+accelerator = Accelerator(mixed_precision='fp16')
+net = AcceleratedNet(
+    MyModule,
+    accelerator=accelerator,
+)
+net.fit(X, y)
+#+end_src
+** Distributed Data Parallel (DDP)
+#+begin_src python
+# in train.py
+from torch.distributed import TCPStore
+from skorch.history import DistributedHistory
+
+accelerator = Accelerator()
+is_master = accelerator.is_main_process
+world_size = accelerator.num_processes
+rank = accelerator.local_process_index
+store = TCPStore("127.0.0.1", port=8080, world_size=world_size, is_master=is_master)
+dist_history = DistributedHistory(store=store, rank=rank, world_size=world_size)
+model = AcceleratedNet(
+    MyModule,
+    accelerator=accelerator,
+    history=dist_history,
+    ...,
+)
+model.fit(X, y)
+#+end_src
+
+In the terminal, run: ~accelerate launch <args> train.py~
 ** Further reading
+- [[https://huggingface.co/docs/accelerate/index][🤗 Accelerate]]
+- [[https://skorch.readthedocs.io/en/stable/user/huggingface.html#accelerate][skorch accelerate docs]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Example notebook showing automatic mixed precision]]
+- [[https://github.com/skorch-dev/skorch/tree/master/examples/accelerate-multigpu][Example scripts showing DDP]]
 * Hugging Face Hub
 ** Intro
 ** Example
