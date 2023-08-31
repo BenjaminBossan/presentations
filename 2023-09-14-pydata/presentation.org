@@ -389,9 +389,23 @@ Instead of saving the whole net, it's also possible to save only a specific part
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Model_Checkpoint.ipynb][Example notebook showing the usage]]
 * Safetensors
 ** Intro
+- [[https://github.com/huggingface/safetensors][safetensors]] is an increasingly popular format to save model weights
+- Has some important [[https://github.com/huggingface/safetensors#yet-another-format-][advantages]] over ~pickle~ -- most notably, it is safe to load safetensor files, even if the source is not trusted
 ** Example
+#+begin_src python
+net = NeuralNet(...)
+net.fit(X, y)
+net.save_params(f_params='model.safetensors', use_safetensors=True)
+
+new_net = NeuralNet(...)  # use same arguments
+new_net.initialize() # This is important!
+new_net.load_params(f_params='model.safetensors', use_safetensors=True)
+#+end_src
+Small caveat: optimizers cannot be stored with ~safetensors~; if they're needed, continue using ~pickle~ instead.
 ** Further reading
-* Large language models
+- [[https://huggingface.co/docs/safetensors/index][🤗 safetensors]]
+- [[https://skorch.readthedocs.io/en/latest/user/save_load.html#using-safetensors][skorch docs on safetensors usage]]
+* Large language models as zero/few-shot classifiers
 ** Intro
 ** ~ZeroShotClassifier~
 ** Grid search
