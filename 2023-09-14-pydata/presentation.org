@@ -12,8 +12,6 @@
 
 * Introduction
 ** Extend your scikit-learn workflow with 🤗 Hugging Face and skorch
-TODO: outline
-- Integrations
 link to presentation: https://github.com/BenjaminBossan/presentations
 ** About scikit-learn
 #+attr_html: :width 450px
@@ -27,7 +25,7 @@ link to presentation: https://github.com/BenjaminBossan/presentations
 We're going to look at:
 1. transformers
 2. tokenizers
-3. PEFT
+3. parameter efficient fine-tuning
 4. accelerate
 5. hub
 6. safetensors
@@ -36,7 +34,7 @@ We're going to look at:
 #+attr_html: :width 400px
 #+CAPTION:
 - mature: first commit July 2017
-- deeply integrates scikit-learn and PyTorch (but no tensorflow etc.)
+- deeply integrates scikit-learn and PyTorch (but not tensorflow etc.)
 - many [[https://github.com/skorch-dev/skorch/tree/master/examples][examples]] and [[https://github.com/skorch-dev/skorch/tree/master/notebooks][notebooks]] in repository
 - comprehensive docs: https://skorch.readthedocs.io
 ** About skorch
@@ -161,8 +159,8 @@ pipeline.fit(X_train, y_train)
 - [[https://huggingface.co/docs/transformers/index][🤗 Transformers]]
 - [[https://skorch.readthedocs.io/en/stable/user/callbacks.html][Callbacks]]
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Basic_Usage.ipynb#Usage-with-sklearn-GridSearchCV][Grid search]]
-- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Fine-tuning BERT]]
-- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_VisionTransformer.ipynb][Fine-tuning ViT]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Fine-tuning BERT notebook]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_VisionTransformer.ipynb][Fine-tuning ViT notebook]]
 * Tokenizers
 ** Intro
 - working with text often requires tokenization of the text
@@ -195,7 +193,7 @@ hf_tokenizer.fit(data)  # fits new tokenizer on data
 hf_tokenizer.transform(data)
 #+end_src
 ** ~HuggingfaceTokenizer~
-Build your very own tokenizer
+Build your own tokenizer
 #+begin_src python
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
@@ -208,7 +206,9 @@ tokenizer = HuggingfaceTokenizer(
     tokenizer__model=WordLevel,
     trainer='auto',
     trainer__vocab_size=1000,
-    trainer__special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"],
+    trainer__special_tokens=[
+        "[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"
+    ],
     normalizer=Lowercase,
     pre_tokenizer=Whitespace,
 )
@@ -241,8 +241,6 @@ search.fit(X, y)
 - [[https://github.com/huggingface/peft][PEFT]] implements several techniques to fine-tune models in an efficient manner
 - Some techniques are specific to language models and rely on modifying the input (not covered)
 - Other techniques, such as LoRA, work more generally
-** LoRA
-TODO: maybe quick primer on LoRA
 ** Training a PEFT model -- setup
 #+begin_src python
 class MLP(nn.Module):
@@ -320,7 +318,7 @@ Only saves the extra LoRA parameters
 ** Intro
 - [[https://github.com/huggingface/accelerate][accelerate]] contains many utilities around making training and inference more efficient
 - Most prominently, it facilitates distributed training ([[https://pytorch.org/docs/stable/notes/ddp.html][DDP]], [[https://huggingface.co/docs/accelerate/usage_guides/fsdp][FSDP]], [[https://huggingface.co/docs/accelerate/usage_guides/deepspeed][DeepSpeed]], etc.)
-- Also contains other utilities that facilitate usage of [[https://huggingface.co/docs/accelerate/quicktour#mixed-precision-training][mixed precision]] (FP16, BF16), [[https://huggingface.co/docs/accelerate/quicktour#gradient-accumulation][gradient accumulation]], etc.
+- Also contains other utilities, like [[https://huggingface.co/docs/accelerate/quicktour#mixed-precision-training][mixed precision]] (FP16, BF16), [[https://huggingface.co/docs/accelerate/quicktour#gradient-accumulation][gradient accumulation]], etc.
 ** Automatic mixed precision
 #+begin_src python
 from accelerate import Accelerator
@@ -367,7 +365,7 @@ In the terminal, run: ~accelerate launch <args> train.py~
 * Hugging Face Hub
 ** Intro
 - [[https://huggingface.co/docs/hub/index][Hugging Face Hub]] is a platform to share models, datasets, demos etc.
-- Use can use it to store checkpoints of your models in the cloud for free
+- You can use it to store and share checkpoints of your models in the cloud for free
 ** Example
 #+begin_src python
 from huggingface_hub import HfApi
@@ -402,7 +400,7 @@ new_net = NeuralNet(...)  # use same arguments
 new_net.initialize() # This is important!
 new_net.load_params(f_params='model.safetensors', use_safetensors=True)
 #+end_src
-Small caveat: optimizers cannot be stored with ~safetensors~; if they're needed, continue using ~pickle~ instead.
+Small caveat: The optimizer cannot be stored with ~safetensors~; if it's needed, use ~pickle~ for the optimizer and safetensors for the rest.
 ** Further reading
 - [[https://huggingface.co/docs/safetensors/index][🤗 safetensors]]
 - [[https://skorch.readthedocs.io/en/latest/user/save_load.html#using-safetensors][skorch docs on safetensors usage]]
@@ -485,10 +483,12 @@ accuracy_score(y_test, y_pred)
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/LLM_Classifier.ipynb][Example notebook]]
 - [[https://huggingface.co/models?pipeline_tag=text-generation][🤗 decoder language models]]
 - [[https://huggingface.co/models?pipeline_tag=text2text-generation][🤗 encoder-decoder language models]]
-* Conclusion
-** TODO
-mention that those different techniques can be combined
+* Wrap-up
+** Conclusion
+- Learned how skorch helps to combine sklearn and the HF ecosystem
+- What was shown is only part of what is possible
+- Of course, the different techniques and libraries can be combined (e.g. tokenizers + transformers + accelerate + PEFT)
 ** Links:
-- Hugging Face
+- Hugging Face: https://huggingface.co/
 - skorch: https://github.com/skorch-dev/skorch
 - presentation: https://github.com/BenjaminBossan/presentations
