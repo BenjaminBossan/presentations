@@ -365,8 +365,28 @@ In the terminal, run: ~accelerate launch <args> train.py~
 - [[https://github.com/skorch-dev/skorch/tree/master/examples/accelerate-multigpu][Example scripts showing DDP]]
 * Hugging Face Hub
 ** Intro
+- [[https://huggingface.co/docs/hub/index][Hugging Face Hub]] is a platform to share models, datasets, demos etc.
+- Use can use it to store checkpoints of your models in the cloud for free
 ** Example
+#+begin_src python
+from huggingface_hub import HfApi
+
+hf_api = HfApi()
+hub_pickle_storer = HfHubStorage(
+    hf_api,
+    path_in_repo=<MODEL_NAME>,
+    repo_id=<REPO_NAME>,
+    token=<TOKEN>,
+)
+checkpoint = TrainEndCheckpoint(f_pickle=hub_pickle_storer)
+net = NeuralNet(..., callbacks=[checkpoint])
+#+end_src
+
+Instead of saving the whole net, it's also possible to save only a specific part, like the model weights.
 ** Further reading
+- [[https://huggingface.co/docs/hub/index][🤗 Hub]]
+- [[https://skorch.readthedocs.io/en/stable/hf.html#skorch.hf.HfHubStorage][skorch Hub storage docs]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Model_Checkpoint.ipynb][Example notebook showing the usage]]
 * Safetensors
 ** Intro
 ** Example
