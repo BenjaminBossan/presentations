@@ -31,6 +31,7 @@ We're going to look at:
 4. accelerate
 5. hub
 6. safetensors
+7. large language models
 ** About skorch
 #+attr_html: :width 400px
 #+CAPTION:
@@ -407,11 +408,83 @@ Small caveat: optimizers cannot be stored with ~safetensors~; if they're needed,
 - [[https://skorch.readthedocs.io/en/latest/user/save_load.html#using-safetensors][skorch docs on safetensors usage]]
 * Large language models as zero/few-shot classifiers
 ** Intro
-** ~ZeroShotClassifier~
-** Grid search
+- Since the GPT-3 release, we know that using Large Language Models (LLM) as zero/few-shot learners is a viable approach
+- skorch's ~ZeroShotClassifier~ and ~FewShotClassifier~ implement this using 🤗 transformers LLMs under the hood, while acting like sklearn classifiers
+- This combination can have multiple advantages, as we will see
+** ~ZeroShotClassifier~ -- fit and predict
+#+begin_src python
+from skorch.llm import ZeroShotClassifier
+
+X, y = ...
+clf = ZeroShotClassifier('bigscience/bloomz-1b1')
+clf.fit(X=None, y=['negative', 'positive'])
+y_pred = clf.predict(X)
+y_proba = clf.predict_proba(X)
+#+end_src
+** ~ZeroShotClassifier~ -- custom prompt
+#+begin_src python
+my_prompt = """Your job is to analyze the sentiment of customer reviews.
+
+The available sentiments are: {labels}
+
+The customer review is:
+
+```
+{text}
+```
+
+Your response:"""
+
+clf = ZeroShotClassifier('bigscience/bloomz-1b1', prompt=my_prompt)
+clf.fit(X=None, y=['negative', 'positive'])
+
+from sklearn.metrics import accuracy_score
+accuracy_my_prompt = accuracy_score(y, clf.predict(X))
+#+end_src
+** ~ZeroShotClassifier~ -- grid search
+#+begin_src python
+from sklearn.model_selection import GridSearchCV
+from skorch.llm import DEFAULT_PROMPT_ZERO_SHOT
+
+params = {
+    'model_name': ['bigscience/bloomz-1b1', 'gpt2', 'tiiuae/falcon-7b-instruct'],
+    'prompt': [DEFAULT_PROMPT_ZERO_SHOT, my_prompt],
+}
+metrics = ['accuracy', 'neg_log_loss']
+search = GridSearchCV(clf, param_grid=params, cv=2, scoring=metrics, refit=False)
+search.fit(X, y)
+#+end_src
 ** ~FewShotClassifier~
+#+begin_src python
+from skorch.llm import FewShotClassifier
+
+X_train, y_train, X_test, y_test = ...
+clf = FewShotClassifier('bigscience/bloomz-1b1', max_samples=5)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+accuracy_score(y_test, y_pred)
+#+end_src
+** Advantages of using ~ZeroShotClassifier~ and ~FewShotClassifier~
+- /Forces/ the model to output one of the provided labels
+- Returns probabilities, not just generated tokens
+- For decoder-only models, supports caching, which can lead to speed ups (does not work for encoder-decoder models)
+- Drop-in replacement for sklearn classifiers
+- Big choice of models from Hugging Face
+- Apart from initial model download, everything runs locally, no data sent to OpenAI or anyone else
 ** When to use
+- When there are few labeled samples/when bootstrapping
+- When you want to systematically study the best prompt, best LLM model, etc.
+- When you need help with debugging bad LLM outputs
+- When the problem domain requires advanced understanding (e.g. PIQA)
+** When not to use
+- When speed or resource usage are a concern
+- When there is a lot of labeled data, a normal supervised learning approach might work better
+- When the task is simple, bag-of-words or similar approaches can be better even with few labeled samples
 ** Further reading
+- [[https://skorch.readthedocs.io/en/stable/user/LLM.html][skorch docs on LLM classifiers]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/LLM_Classifier.ipynb][Example notebook]]
+- [[https://huggingface.co/models?pipeline_tag=text-generation][🤗 decoder language models]]
+- [[https://huggingface.co/models?pipeline_tag=text2text-generation][🤗 encoder-decoder language models]]
 * Conclusion
 ** TODO
 mention that those different techniques can be combined
