@@ -12,17 +12,17 @@ In this talk, I'll give a brief introduction to skorch. Then we will learn how t
 
 This talk should be of interest to you if you're coming from the scikit-learn world and are interested in the latest deep learning developments. Familiarity with scikit-learn and a little bit of PyTorch knowledge is recommended.
 
-## Opening
+## Viewing the presentation
 
 The presentation is written as a org file, which is rendered directly on github. To view it, click [this link](https://github.com/BenjaminBossan/presentations/blob/master/2023-09-14-pydata/presentation.org).
 
 To view the reveal.js presentation, download and open`presentation.html` in your favorite browser.
 
-## Running
+## Editing the presentation
 
-To compile from source, open and edit `presentation.org` and run `org-export-dispatch` > `export to reveal.js` > `export to file` in Emacs (C-c C-e v v).
+To compile from source, open and edit `presentation.org` in Emacs and run `org-export-dispatch` > `export to reveal.js` > `export to file` in Emacs (C-c C-e v v).
 
-If Emacs usage is not desired, edit `presentation.html` directly.
+If Emacs usage is not desired, edit [`presentation.html`](https://github.com/BenjaminBossan/presentations/blob/main/2023-09-14-pydata/presentation.html) directly.
 
 ### Installation
 
