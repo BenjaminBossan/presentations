@@ -17,6 +17,36 @@ link to presentation: https://github.com/BenjaminBossan/presentations
 #+attr_html: :width 450px
 #+CAPTION:
 [[./assets/scikit-learn.png]]
+** About skorch: overview
+#+attr_html: :width 400px
+#+CAPTION:
+- mature: first commit July 2017
+- deeply integrates scikit-learn and PyTorch (but not tensorflow etc.)
+- many [[https://github.com/skorch-dev/skorch/tree/master/examples][examples]] and [[https://github.com/skorch-dev/skorch/tree/master/notebooks][notebooks]] in repository
+- comprehensive docs: https://skorch.readthedocs.io
+** About skorch: ecosystem
+#+attr_html: :width 450px
+#+CAPTION:
+[[./assets/skorch_torch_sklearn_eco_2.svg]]
+** About skorch: code
+#+begin_src python
+from torch import nn
+from skorch import NeuralNetClassifier
+from skorch.callbacks import EpochScoring
+
+class MyModule(nn.Module):
+    ...
+
+net = NeuralNetClassifier(
+    MyModule,
+    max_epochs=10,
+    lr=0.1,
+    callbacks=[EpochScoring(scoring='roc_auc', lower_is_better=False)],
+)
+net.fit(X_train, y_train)
+net.predict(X_test)
+net.predict_proba(X_test)
+#+end_src
 ** About 🤗 Hugging Face
 #+attr_html: :width 500px
 #+CAPTION:
@@ -30,17 +60,6 @@ We're going to look at:
 5. hub
 6. safetensors
 7. large language models
-** About skorch
-#+attr_html: :width 400px
-#+CAPTION:
-- mature: first commit July 2017
-- deeply integrates scikit-learn and PyTorch (but not tensorflow etc.)
-- many [[https://github.com/skorch-dev/skorch/tree/master/examples][examples]] and [[https://github.com/skorch-dev/skorch/tree/master/notebooks][notebooks]] in repository
-- comprehensive docs: https://skorch.readthedocs.io
-** About skorch
-#+attr_html: :width 450px
-#+CAPTION:
-[[./assets/skorch_torch_sklearn_eco.svg]]
 * Transformers
 ** Intro
 - most well known Hugging Face package
@@ -164,11 +183,11 @@ pipeline.fit(X_train, y_train)
 * Tokenizers
 ** Intro
 - working with text often requires tokenization of the text
-- 🤗 tokenizers provides wide range of techniques and pretrained tokenizers (BPE, word piece, ...)
+- 🤗 tokenizers provide a wide range of techniques and pretrained tokenizers (BPE, word piece, ...)
 - not only tokenization, but also truncation, padding, etc.
-- works seemlessly with 🤗 transformers but also independently
+- works seamlessly with 🤗 transformers but also independently
 ** ~HuggingfacePretrainedTokenizer~
-Load a pretrained tokenizer wrapped inside an sklearn transformer.
+Load a pretrained tokenizer wrapped inside a scikit-learn transformer.
 #+begin_src python
 from skorch.hf import HuggingfacePretrainedTokenizer
 
@@ -270,6 +289,7 @@ config = peft.LoraConfig(
     modules_to_save=["seq.4"],
 )
 peft_model = peft.get_peft_model(MLP(), config)
+# only 1.4% of parameters are trained, rest is frozen
 
 net = NeuralNetClassifier(peft_model, ...)
 net.fit(X, y)
@@ -397,7 +417,7 @@ net.fit(X, y)
 net.save_params(f_params='model.safetensors', use_safetensors=True)
 
 new_net = NeuralNet(...)  # use same arguments
-new_net.initialize() # This is important!
+new_net.initialize()  # This is important!
 new_net.load_params(f_params='model.safetensors', use_safetensors=True)
 #+end_src
 Small caveat: The optimizer cannot be stored with ~safetensors~; if it's needed, use ~pickle~ for the optimizer and safetensors for the rest.
@@ -435,9 +455,7 @@ Your response:"""
 
 clf = ZeroShotClassifier('bigscience/bloomz-1b1', prompt=my_prompt)
 clf.fit(X=None, y=['negative', 'positive'])
-
-from sklearn.metrics import accuracy_score
-accuracy_my_prompt = accuracy_score(y, clf.predict(X))
+predicted_labels = clf.predict(X)
 #+end_src
 ** ~ZeroShotClassifier~ -- grid search
 #+begin_src python
@@ -449,7 +467,7 @@ params = {
     'prompt': [DEFAULT_PROMPT_ZERO_SHOT, my_prompt],
 }
 metrics = ['accuracy', 'neg_log_loss']
-search = GridSearchCV(clf, param_grid=params, cv=2, scoring=metrics, refit=False)
+search = GridSearchCV(clf, param_grid=params, scoring=metrics, refit=False)
 search.fit(X, y)
 #+end_src
 ** ~FewShotClassifier~
@@ -463,10 +481,10 @@ y_pred = clf.predict(X_test)
 accuracy_score(y_test, y_pred)
 #+end_src
 ** Advantages of using ~ZeroShotClassifier~ and ~FewShotClassifier~
+- Drop-in replacement for sklearn classifiers
 - /Forces/ the model to output one of the provided labels
 - Returns probabilities, not just generated tokens
 - For decoder-only models, supports caching, which can lead to speed ups (does not work for encoder-decoder models)
-- Drop-in replacement for sklearn classifiers
 - Big choice of models from Hugging Face
 - Apart from initial model download, everything runs locally, no data sent to OpenAI or anyone else
 ** When to use
@@ -475,9 +493,9 @@ accuracy_score(y_test, y_pred)
 - When you need help with debugging bad LLM outputs
 - When the problem domain requires advanced understanding (e.g. PIQA)
 ** When not to use
-- When speed or resource usage are a concern
-- When there is a lot of labeled data, a normal supervised learning approach might work better
-- When the task is simple, bag-of-words or similar approaches can be better even with few labeled samples
+- When runtime performance or resource usage are a concern
+- When there are a lot of labeled samples, supervised learning might work better
+- When the task is simple, bag-of-words or similar approaches can be better even with few samples
 ** Further reading
 - [[https://skorch.readthedocs.io/en/stable/user/LLM.html][skorch docs on LLM classifiers]]
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/LLM_Classifier.ipynb][Example notebook]]
@@ -485,7 +503,7 @@ accuracy_score(y_test, y_pred)
 - [[https://huggingface.co/models?pipeline_tag=text2text-generation][🤗 encoder-decoder language models]]
 * Wrap-up
 ** Conclusion
-- Learned how skorch helps to combine sklearn and the HF ecosystem
+- Learned how skorch helps to combine sklearn and the Hugging Face ecosystem
 - What was shown is only part of what is possible
 - Of course, the different techniques and libraries can be combined (e.g. tokenizers + transformers + accelerate + PEFT)
 ** Links:
