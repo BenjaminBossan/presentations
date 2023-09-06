@@ -2,6 +2,8 @@
 
 [2023-09-14, 10:30 - 11:00, Room 2](https://amsterdam2023.pydata.org/cfp/talk/PDPULJ/)
 
+[Slides (rendered on GitHub)](https://github.com/BenjaminBossan/presentations/blob/master/2023-09-14-pydata/presentation.org).
+
 ## Abstract
 
 **Discover how to bridge the gap between traditional machine learning and the rapidly evolving world of AI with skorch. This package integrates the Hugging Face ecosystem while adhering to the familiar scikit-learn API. We will explore fine-turing of pre-trained models, creating our own tokenizers, accelerating model training, and leveraging Large Language Models.**
