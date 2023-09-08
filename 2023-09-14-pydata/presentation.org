@@ -92,7 +92,6 @@ from sklearn.pipeline import Pipeline
 from skorch import NeuralNetClassifier
 from skorch.callbacks import EpochScoring
 
-X_train, y_train = ...
 model_name = "distilbert-base-uncased"
 
 pipeline = Pipeline([
@@ -108,6 +107,7 @@ pipeline = Pipeline([
 #+END_SRC
 ** Fine-tuning a BERT model -- training and inference
 #+begin_src python
+X_train, y_train, X_test, y_test = ...
 pipeline.fit(X_train, y_train)
 
 # prints
@@ -427,8 +427,8 @@ Small caveat: The optimizer cannot be stored with ~safetensors~; if it's needed,
 * Large language models as zero/few-shot classifiers
 ** Intro
 - Since the GPT-3 release, we know that using Large Language Models (LLM) as zero/few-shot learners is a viable approach
-- skorch's ~ZeroShotClassifier~ and ~FewShotClassifier~ implement this using 🤗 transformers LLMs under the hood, while acting like sklearn classifiers
-- This combination can have multiple advantages, as we will see
+- skorch's ~ZeroShotClassifier~ and ~FewShotClassifier~ implement zero/few-shot classification
+- Use 🤗 transformers LLMs under the hood, while behaving like sklearn classifiers
 ** ~ZeroShotClassifier~ -- fit and predict
 #+begin_src python
 from skorch.llm import ZeroShotClassifier
