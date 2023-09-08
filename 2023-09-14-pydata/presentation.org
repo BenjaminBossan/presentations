@@ -4,7 +4,7 @@
 #+OPTIONS: toc:nil
 #+REVEAL_TITLE_SLIDE: %t
 #+MACRO: color @@html:<font color="$1">$2</font>@@
-#+REVEAL_EXTRA_CSS: ./reveal.js/css/theme/source/league.scss
+#+REVEAL_THEME: black
 #+REVEAL_EXTRA_CSS: ./local.css
 #+REVEAL_SLIDE_FOOTER:
 #+OPTIONS: reveal_single_file:t
