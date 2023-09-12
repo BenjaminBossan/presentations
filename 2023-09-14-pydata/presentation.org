@@ -505,7 +505,8 @@ accuracy_score(y_test, y_pred)
 ** Conclusion
 - Learned how skorch helps to combine sklearn and the Hugging Face ecosystem
 - What was shown is only part of what is possible
-- Of course, the different techniques and libraries can be combined (e.g. tokenizers + transformers + accelerate + PEFT)
+- Of course, the different techniques and libraries can be combined
+  - e.g. sklearn Pipeline + GridSearchCV + tokenizers + transformers + accelerate + PEFT
 ** Links:
 - Hugging Face: https://huggingface.co/
 - skorch: https://github.com/skorch-dev/skorch
