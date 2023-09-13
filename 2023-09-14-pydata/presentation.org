@@ -41,7 +41,7 @@ net = NeuralNetClassifier(
     MyModule,
     max_epochs=10,
     lr=0.1,
-    callbacks=[EpochScoring(scoring='roc_auc', lower_is_better=False)],
+    callbacks=[EpochScoring(scoring="roc_auc", lower_is_better=False)],
 )
 net.fit(X_train, y_train)
 net.predict(X_test)
@@ -54,21 +54,15 @@ net.predict_proba(X_test)
 ** About 🤗 Hugging Face
 We're going to look at:
 1. transformers
-2. tokenizers
-3. parameter efficient fine-tuning
-4. accelerate
-5. hub
-6. safetensors
-7. large language models
+2. parameter efficient fine-tuning
+3. accelerate
+4. large language models
 * Transformers
 ** Intro
 - most well known Hugging Face package
 - used predominantly for /transformers/-based pretrained models
   + BERT, GPT, Falcon, Llama 2, etc.
-- Also non-transformers models
-  + computer vision models
-  + other types of language models (RWKV)
-  + and many more
+- also non-transformers models
 ** Fine-tuning a BERT model -- PyTorch module
 #+BEGIN_SRC python
 from transformers import AutoModelForSequenceClassification
@@ -90,24 +84,22 @@ class BertModule(nn.Module):
 from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
 from skorch import NeuralNetClassifier
-from skorch.callbacks import EpochScoring
+from skorch.hf import HuggingfacePretrainedTokenizer
 
 model_name = "distilbert-base-uncased"
 
 pipeline = Pipeline([
-    ('tokenizer', HuggingfacePretrainedTokenizer(model_name)),
-    ('net', NeuralNetClassifier(
+    ("tokenizer", HuggingfacePretrainedTokenizer(model_name)),
+    ("net", NeuralNetClassifier(
         BertModule,
         module__name=model_name,
         module__num_labels=len(set(y_train)),
         criterion=nn.CrossEntropyLoss,
-        callbacks=[EpochScoring(scoring='roc_auc', lower_is_better=False)],
     )),
 ])
 #+END_SRC
 ** Fine-tuning a BERT model -- training and inference
 #+begin_src python
-X_train, y_train, X_test, y_test = ...
 pipeline.fit(X_train, y_train)
 
 # prints
@@ -122,139 +114,25 @@ print(accuracy_score(y_test, y_pred))
 #+end_src
 ** Fine-tuning a BERT model -- grid search
 #+begin_src python
-from sklearn import GridSearchCV
+from sklearn.model_selection import GridSearchCV
 
 params = {
-    "module__name": ["distilbert-base-uncased", "bert-base-cased"],
-    "optimizer": [torch.optim.SGD, torch.optim.Adam],
-    "lr": [0.01, 3e-4],
-    "max_epochs": [10, 20],
+    "net__module__name": ["distilbert-base-uncased", "bert-base-cased"],
+    "net__optimizer": [torch.optim.SGD, torch.optim.Adam],
+    "net__lr": [0.01, 3e-4],
+    "net__max_epochs": [10, 20],
 }
 search = GridSearchCV(pipeline, params)
 search.fit(X_train, y_train)
 #+end_src
-** Fine-tuning a vision transformer model -- feature extraction
-#+begin_src python
-from sklearn.base import BaseEstimator, TransformerMixin
-from transformers import ViTFeatureExtractor, ViTForImageClassification
-
-class FeatureExtractor(BaseEstimator, TransformerMixin):
-    def __init__(self, model_name, device='cpu'):
-        self.model_name = model_name
-        self.device = device
-
-    def fit(self, X, y=None, **fit_params):
-        self.extractor_ = ViTFeatureExtractor.from_pretrained(
-            self.model_name, device=self.device,
-        )
-        return self
-
-    def transform(self, X):
-        return self.extractor_(X, return_tensors='pt')['pixel_values']
-
-class VitModule(nn.Module):
-    # same idea as before
-#+end_src
-** Fine-tuning a vision transformer model -- skorch code
-#+begin_src python
-vit_model = "google/vit-base-patch32-224-in21k"
-
-pipeline = Pipeline([
-    ('feature_extractor', FeatureExtractor(
-        vit_model,
-        device=device,
-    )),
-    ('net', NeuralNetClassifier(
-        VitModule,
-        module__model_name=vit_model,
-        module__num_classes=len(set(y_train)),
-        criterion=nn.CrossEntropyLoss,
-        device=device,
-    )),
-])
-pipeline.fit(X_train, y_train)
-#+end_src
 ** Further reading
 - [[https://huggingface.co/docs/transformers/index][🤗 Transformers]]
-- [[https://skorch.readthedocs.io/en/stable/user/callbacks.html][Callbacks]]
+- [[https://huggingface.co/docs/tokenizers/index][🤗 Tokenizers]]
+- [[https://skorch.readthedocs.io/en/stable/user/callbacks.html][skorch callbacks]]
+- [[https://skorch.readthedocs.io/en/stable/user/huggingface.html#tokenizers][skorch tokenizers docs]]
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Basic_Usage.ipynb#Usage-with-sklearn-GridSearchCV][Grid search]]
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Fine-tuning BERT notebook]]
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_VisionTransformer.ipynb][Fine-tuning ViT notebook]]
-* Tokenizers
-** Intro
-- working with text often requires tokenization of the text
-- 🤗 tokenizers provide a wide range of techniques and pretrained tokenizers (BPE, word piece, ...)
-- not only tokenization, but also truncation, padding, etc.
-- works seamlessly with 🤗 transformers but also independently
-** ~HuggingfacePretrainedTokenizer~
-Load a pretrained tokenizer wrapped inside a scikit-learn transformer.
-#+begin_src python
-from skorch.hf import HuggingfacePretrainedTokenizer
-
-hf_tokenizer = HuggingfacePretrainedTokenizer('bert-base-uncased')
-data = ['hello there', 'this is a text']
-hf_tokenizer.fit(data)  # only loads the model
-hf_tokenizer.transform(data)
-# returns
-{
-    'input_ids': tensor([[ 101, 7592, 2045,  102,    0, ...]]),
-    'attention_mask': tensor([[1, 1, 1, 1, 0, ...]]),
-}
-#+end_src
-** ~HuggingfacePretrainedTokenizer~ -- training
-Use hyper parameters from pretrained tokenizer to fit on your own data
-#+begin_src python
-hf_tokenizer = HuggingfacePretrainedTokenizer(
-    'bert-base-uncased', vocab_size=12345, train=True
-)
-data = ...
-hf_tokenizer.fit(data)  # fits new tokenizer on data
-hf_tokenizer.transform(data)
-#+end_src
-** ~HuggingfaceTokenizer~
-Build your own tokenizer
-#+begin_src python
-from tokenizers import Tokenizer
-from tokenizers.models import WordLevel
-from tokenizers.normalizers import Lowercase, StripAccents
-from tokenizers.pre_tokenizers import Whitespace
-
-tokenizer = HuggingfaceTokenizer(
-    model__unk_token="[UNK]",
-    tokenizer=Tokenizer,
-    tokenizer__model=WordLevel,
-    trainer='auto',
-    trainer__vocab_size=1000,
-    trainer__special_tokens=[
-        "[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"
-    ],
-    normalizer=Lowercase,
-    pre_tokenizer=Whitespace,
-)
-tokenizer.fit(data)
-#+end_src
-** ~HuggingfaceTokenizer~ -- grid search
-#+begin_src python
-pipeline = Pipeline([
-    ('tokenize', tokenizer),
-    ('net', NeuralNetClassifier(BertModule, ...)),
-])
-
-params = {
-    'tokenize__tokenizer': [Tokenizer],
-    'tokenize__tokenizer__model': [WordLevel],
-    'tokenize__model__unk_token': ["[UNK]"],
-    'tokenize__trainer__special_tokens': [["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]],
-    "tokenize__trainer__vocab_size": [500, 1000],
-    "tokenize__normalizer": [Lowercase, StripAccents],
-}
-search = GridSearchCV(pipeline, params, refit=False)
-search.fit(X, y)
-#+end_src
-** Further reading
-- [[https://huggingface.co/docs/tokenizers/index][🤗 Tokenizers]]
-- [[https://skorch.readthedocs.io/en/stable/user/huggingface.html#tokenizers][skorch tokenizers docs]]
-- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Example notebook]]
 * PEFT: Parameter efficient fine-tuning
 ** Intro
 - [[https://github.com/huggingface/peft][PEFT]] implements several techniques to fine-tune models in an efficient manner
@@ -294,29 +172,9 @@ peft_model = peft.get_peft_model(MLP(), config)
 net = NeuralNetClassifier(peft_model, ...)
 net.fit(X, y)
 #+end_src
-** Hyper-parameter search with PEFT
-#+begin_src python
-from sklearn.model_selection import RandomizedSearchCV
-
-def create_peft_model(target_modules, r=8, **kwargs):
-    config = peft.LoraConfig(
-        r=r, target_modules=target_modules, modules_to_save=["seq.4"]
-    )
-    model = MLP(**kwargs)
-    return peft.get_peft_model(model, config)
-
-params = {
-    "module__r": [4, 8, 16],
-    "module__target_modules": [["seq.0"], ["seq.2"], ["seq.0", "seq.2"]],
-    "module__num_units_hidden": [1000, 2000],
-}
-search = RandomizedSearchCV(net, params, n_iter=20, random_state=0)
-search.fit(X, y)
-#+end_src
 ** Saving the PEFT model
 #+begin_src python
-best_skorch_model = search.best_estimator_
-peft_model = best_skorch_model.module_
+peft_model = net.module_
 peft_model.save_pretrained(dir_name)
 #+end_src
 
@@ -348,13 +206,243 @@ from skorch.hf import AccelerateMixin
 class AcceleratedNet(AccelerateMixin, NeuralNet):
     """NeuralNet with accelerate support"""
 
-accelerator = Accelerator(mixed_precision='fp16')
+accelerator = Accelerator(mixed_precision="fp16")
 net = AcceleratedNet(
     MyModule,
     accelerator=accelerator,
 )
 net.fit(X, y)
 #+end_src
+** Further reading
+- [[https://huggingface.co/docs/accelerate/index][🤗 Accelerate]]
+- [[https://skorch.readthedocs.io/en/stable/user/huggingface.html#accelerate][skorch accelerate docs]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Example notebook showing automatic mixed precision]]
+- [[https://github.com/skorch-dev/skorch/tree/master/examples/accelerate-multigpu][Example scripts showing DDP]]
+* Large language models as zero/few-shot classifiers
+** Intro
+- Since the GPT-3 release, we know that using Large Language Models (LLM) as zero/few-shot learners is a viable approach
+- skorch's ~ZeroShotClassifier~ and ~FewShotClassifier~ implement zero/few-shot classification
+- Use 🤗 transformers LLMs under the hood, while behaving like sklearn classifiers
+** ~ZeroShotClassifier~ -- fit and predict
+#+begin_src python
+from skorch.llm import ZeroShotClassifier
+
+X, y = ...
+clf = ZeroShotClassifier("bigscience/bloomz-1b1")
+clf.fit(X=None, y=["negative", "positive"])
+y_pred = clf.predict(X)
+y_proba = clf.predict_proba(X)
+#+end_src
+** ~ZeroShotClassifier~ -- custom prompt
+#+begin_src python
+my_prompt = """Your job is to analyze the sentiment of customer reviews.
+
+The available sentiments are: {labels}
+
+The customer review is:
+
+```
+{text}
+```
+
+Your response:"""
+
+clf = ZeroShotClassifier("bigscience/bloomz-1b1", prompt=my_prompt)
+clf.fit(X=None, y=["negative", "positive"])
+predicted_labels = clf.predict(X)
+#+end_src
+** ~ZeroShotClassifier~ -- grid search
+#+begin_src python
+from sklearn.model_selection import GridSearchCV
+from skorch.llm import DEFAULT_PROMPT_ZERO_SHOT
+
+params = {
+    "model_name": ["bigscience/bloomz-1b1", "gpt2", "tiiuae/falcon-7b-instruct"],
+    "prompt": [DEFAULT_PROMPT_ZERO_SHOT, my_prompt],
+}
+metrics = ["accuracy", "neg_log_loss"]
+search = GridSearchCV(clf, param_grid=params, scoring=metrics, refit=False)
+search.fit(X, y)
+#+end_src
+** ~FewShotClassifier~
+#+begin_src python
+from skorch.llm import FewShotClassifier
+
+X_train, y_train, X_test, y_test = ...
+clf = FewShotClassifier("bigscience/bloomz-1b1", max_samples=5)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+accuracy_score(y_test, y_pred)
+#+end_src
+** Advantages of using ~ZeroShotClassifier~ and ~FewShotClassifier~
+- Drop-in replacement for sklearn classifiers
+- /Forces/ the model to output one of the provided labels
+- Returns probabilities, not just generated tokens
+- For decoder-only models, supports caching, which can lead to speed ups (does not work for encoder-decoder models)
+- Big choice of models from Hugging Face
+- Apart from initial model download, everything runs locally, no data sent to OpenAI or anyone else
+** When to use
+- When there are few labeled samples/when bootstrapping
+- When you want to systematically study the best prompt, best LLM model, etc.
+- When you need help with debugging bad LLM outputs
+- When the problem domain requires advanced understanding (e.g. PIQA)
+** When not to use
+- When runtime performance or resource usage are a concern
+- When there are a lot of labeled samples, supervised learning might work better
+- When the task is simple, bag-of-words or similar approaches can be better even with few samples
+** Further reading
+- [[https://skorch.readthedocs.io/en/stable/user/LLM.html][skorch docs on LLM classifiers]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/LLM_Classifier.ipynb][Example notebook]]
+- [[https://huggingface.co/models?pipeline_tag=text-generation][🤗 decoder language models]]
+- [[https://huggingface.co/models?pipeline_tag=text2text-generation][🤗 encoder-decoder language models]]
+* Wrap-up
+** Conclusion
+- Learned how skorch helps to combine sklearn and the Hugging Face ecosystem
+- What was shown is only part of what is possible
+  + Vision models, customized tokenizers, 🤗 Hub, safetensors, ...
+- Of course, the different techniques and libraries can be combined
+  + e.g. sklearn Pipeline + GridSearchCV + tokenizers + transformers + accelerate + PEFT
+** Links:
+- Hugging Face: https://huggingface.co/
+- skorch: https://github.com/skorch-dev/skorch
+- presentation: https://github.com/BenjaminBossan/presentations
+* Backup slides
+* Vision tranformer model
+** Fine-tuning a vision transformer model -- feature extraction
+#+begin_src python
+from sklearn.base import BaseEstimator, TransformerMixin
+from transformers import ViTFeatureExtractor, ViTForImageClassification
+
+class FeatureExtractor(BaseEstimator, TransformerMixin):
+    def __init__(self, model_name, device="cpu"):
+        self.model_name = model_name
+        self.device = device
+
+    def fit(self, X, y=None, **fit_params):
+        self.extractor_ = ViTFeatureExtractor.from_pretrained(
+            self.model_name, device=self.device,
+        )
+        return self
+
+    def transform(self, X):
+        return self.extractor_(X, return_tensors="pt")["pixel_values"]
+
+class VitModule(nn.Module):
+    # same idea as before
+#+end_src
+** Fine-tuning a vision transformer model -- skorch code
+#+begin_src python
+vit_model = "google/vit-base-patch32-224-in21k"
+
+pipeline = Pipeline([
+    ("feature_extractor", FeatureExtractor(
+        vit_model,
+        device=device,
+    )),
+    ("net", NeuralNetClassifier(
+        VitModule,
+        module__model_name=vit_model,
+        module__num_classes=len(set(y_train)),
+        criterion=nn.CrossEntropyLoss,
+        device=device,
+    )),
+])
+pipeline.fit(X_train, y_train)
+#+end_src
+
+* Tokenizers
+** Intro
+- working with text often requires tokenization of the text
+- 🤗 tokenizers provide a wide range of techniques and pretrained tokenizers (BPE, word piece, ...)
+- not only tokenization, but also truncation, padding, etc.
+- works seamlessly with 🤗 transformers but also independently
+** ~HuggingfacePretrainedTokenizer~
+Load a pretrained tokenizer wrapped inside a scikit-learn transformer.
+#+begin_src python
+from skorch.hf import HuggingfacePretrainedTokenizer
+
+hf_tokenizer = HuggingfacePretrainedTokenizer("bert-base-uncased")
+data = ["hello there", "this is a text"]
+hf_tokenizer.fit(data)  # only loads the model
+hf_tokenizer.transform(data)
+# returns
+{
+    "input_ids": tensor([[ 101, 7592, 2045,  102,    0, ...]]),
+    "attention_mask": tensor([[1, 1, 1, 1, 0, ...]]),
+}
+#+end_src
+** ~HuggingfacePretrainedTokenizer~ -- training
+Use hyper parameters from pretrained tokenizer to fit on your own data
+#+begin_src python
+hf_tokenizer = HuggingfacePretrainedTokenizer(
+    "bert-base-uncased", vocab_size=12345, train=True
+)
+data = ...
+hf_tokenizer.fit(data)  # fits new tokenizer on data
+hf_tokenizer.transform(data)
+#+end_src
+** ~HuggingfaceTokenizer~
+Build your own tokenizer
+#+begin_src python
+from tokenizers import Tokenizer
+from tokenizers.models import WordLevel
+from tokenizers.normalizers import Lowercase, StripAccents
+from tokenizers.pre_tokenizers import Whitespace
+
+tokenizer = HuggingfaceTokenizer(
+    model__unk_token="[UNK]",
+    tokenizer=Tokenizer,
+    tokenizer__model=WordLevel,
+    trainer='auto',
+    trainer__vocab_size=1000,
+    trainer__special_tokens=[
+        "[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"
+    ],
+    normalizer=Lowercase,
+    pre_tokenizer=Whitespace,
+)
+tokenizer.fit(data)
+#+end_src
+** ~HuggingfaceTokenizer~ -- grid search
+#+begin_src python
+pipeline = Pipeline([
+    ("tokenize", tokenizer),
+    ("net", NeuralNetClassifier(BertModule, ...)),
+])
+
+params = {
+    "tokenize__tokenizer": [Tokenizer],
+    "tokenize__tokenizer__model": [WordLevel],
+    "tokenize__model__unk_token": ['[UNK]'],
+    "tokenize__trainer__special_tokens": [['[UNK]', '[CLS]', '[SEP]', '[PAD]', '[MASK]']],
+    'tokenize__trainer__vocab_size': [500, 1000],
+    'tokenize__normalizer': [Lowercase, StripAccents],
+}
+search = GridSearchCV(pipeline, params, refit=False)
+search.fit(X, y)
+#+end_src
+
+* PEFT
+** Hyper-parameter search with PEFT
+#+begin_src python
+from sklearn.model_selection import RandomizedSearchCV
+
+def create_peft_model(target_modules, r=8, **kwargs):
+    config = peft.LoraConfig(
+        r=r, target_modules=target_modules, modules_to_save=["seq.4"]
+    )
+    model = MLP(**kwargs)
+    return peft.get_peft_model(model, config)
+
+params = {
+    "module__r": [4, 8, 16],
+    "module__target_modules": [["seq.0"], ["seq.2"], ["seq.0", "seq.2"]],
+    "module__num_units_hidden": [1000, 2000],
+}
+search = RandomizedSearchCV(net, params, n_iter=20, random_state=0)
+search.fit(X, y)
+#+end_src
+* Accelerate
 ** Distributed Data Parallel (DDP)
 #+begin_src python
 # in train.py
@@ -377,11 +465,7 @@ model.fit(X, y)
 #+end_src
 
 In the terminal, run: ~accelerate launch <args> train.py~
-** Further reading
-- [[https://huggingface.co/docs/accelerate/index][🤗 Accelerate]]
-- [[https://skorch.readthedocs.io/en/stable/user/huggingface.html#accelerate][skorch accelerate docs]]
-- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Example notebook showing automatic mixed precision]]
-- [[https://github.com/skorch-dev/skorch/tree/master/examples/accelerate-multigpu][Example scripts showing DDP]]
+
 * Hugging Face Hub
 ** Intro
 - [[https://huggingface.co/docs/hub/index][Hugging Face Hub]] is a platform to share models, datasets, demos etc.
@@ -414,100 +498,13 @@ Instead of saving the whole net, it's also possible to save only a specific part
 #+begin_src python
 net = NeuralNet(...)
 net.fit(X, y)
-net.save_params(f_params='model.safetensors', use_safetensors=True)
+net.save_params(f_params="model.safetensors", use_safetensors=True)
 
 new_net = NeuralNet(...)  # use same arguments
 new_net.initialize()  # This is important!
-new_net.load_params(f_params='model.safetensors', use_safetensors=True)
+new_net.load_params(f_params="model.safetensors", use_safetensors=True)
 #+end_src
 Small caveat: The optimizer cannot be stored with ~safetensors~; if it's needed, use ~pickle~ for the optimizer and safetensors for the rest.
 ** Further reading
 - [[https://huggingface.co/docs/safetensors/index][🤗 safetensors]]
 - [[https://skorch.readthedocs.io/en/latest/user/save_load.html#using-safetensors][skorch docs on safetensors usage]]
-* Large language models as zero/few-shot classifiers
-** Intro
-- Since the GPT-3 release, we know that using Large Language Models (LLM) as zero/few-shot learners is a viable approach
-- skorch's ~ZeroShotClassifier~ and ~FewShotClassifier~ implement zero/few-shot classification
-- Use 🤗 transformers LLMs under the hood, while behaving like sklearn classifiers
-** ~ZeroShotClassifier~ -- fit and predict
-#+begin_src python
-from skorch.llm import ZeroShotClassifier
-
-X, y = ...
-clf = ZeroShotClassifier('bigscience/bloomz-1b1')
-clf.fit(X=None, y=['negative', 'positive'])
-y_pred = clf.predict(X)
-y_proba = clf.predict_proba(X)
-#+end_src
-** ~ZeroShotClassifier~ -- custom prompt
-#+begin_src python
-my_prompt = """Your job is to analyze the sentiment of customer reviews.
-
-The available sentiments are: {labels}
-
-The customer review is:
-
-```
-{text}
-```
-
-Your response:"""
-
-clf = ZeroShotClassifier('bigscience/bloomz-1b1', prompt=my_prompt)
-clf.fit(X=None, y=['negative', 'positive'])
-predicted_labels = clf.predict(X)
-#+end_src
-** ~ZeroShotClassifier~ -- grid search
-#+begin_src python
-from sklearn.model_selection import GridSearchCV
-from skorch.llm import DEFAULT_PROMPT_ZERO_SHOT
-
-params = {
-    'model_name': ['bigscience/bloomz-1b1', 'gpt2', 'tiiuae/falcon-7b-instruct'],
-    'prompt': [DEFAULT_PROMPT_ZERO_SHOT, my_prompt],
-}
-metrics = ['accuracy', 'neg_log_loss']
-search = GridSearchCV(clf, param_grid=params, scoring=metrics, refit=False)
-search.fit(X, y)
-#+end_src
-** ~FewShotClassifier~
-#+begin_src python
-from skorch.llm import FewShotClassifier
-
-X_train, y_train, X_test, y_test = ...
-clf = FewShotClassifier('bigscience/bloomz-1b1', max_samples=5)
-clf.fit(X_train, y_train)
-y_pred = clf.predict(X_test)
-accuracy_score(y_test, y_pred)
-#+end_src
-** Advantages of using ~ZeroShotClassifier~ and ~FewShotClassifier~
-- Drop-in replacement for sklearn classifiers
-- /Forces/ the model to output one of the provided labels
-- Returns probabilities, not just generated tokens
-- For decoder-only models, supports caching, which can lead to speed ups (does not work for encoder-decoder models)
-- Big choice of models from Hugging Face
-- Apart from initial model download, everything runs locally, no data sent to OpenAI or anyone else
-** When to use
-- When there are few labeled samples/when bootstrapping
-- When you want to systematically study the best prompt, best LLM model, etc.
-- When you need help with debugging bad LLM outputs
-- When the problem domain requires advanced understanding (e.g. PIQA)
-** When not to use
-- When runtime performance or resource usage are a concern
-- When there are a lot of labeled samples, supervised learning might work better
-- When the task is simple, bag-of-words or similar approaches can be better even with few samples
-** Further reading
-- [[https://skorch.readthedocs.io/en/stable/user/LLM.html][skorch docs on LLM classifiers]]
-- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/LLM_Classifier.ipynb][Example notebook]]
-- [[https://huggingface.co/models?pipeline_tag=text-generation][🤗 decoder language models]]
-- [[https://huggingface.co/models?pipeline_tag=text2text-generation][🤗 encoder-decoder language models]]
-* Wrap-up
-** Conclusion
-- Learned how skorch helps to combine sklearn and the Hugging Face ecosystem
-- What was shown is only part of what is possible
-- Of course, the different techniques and libraries can be combined
-  - e.g. sklearn Pipeline + GridSearchCV + tokenizers + transformers + accelerate + PEFT
-** Links:
-- Hugging Face: https://huggingface.co/
-- skorch: https://github.com/skorch-dev/skorch
-- presentation: https://github.com/BenjaminBossan/presentations

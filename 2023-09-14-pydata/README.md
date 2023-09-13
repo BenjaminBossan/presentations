@@ -39,6 +39,9 @@ To get reveal.js, there are two options:
    [reveal.js](https://github.com/hakimel/reveal.js/releases/tag/4.5.0)
    and include it with the other files (current approach, required for standalone file)
 
-### Changing theme
+### Changing to a light theme
 
-Change `REVEAL_THEME:` to one of the available themes in `revealjs/css/theme` (e.g. `black` or `white`). If necessary, also change the color in `custom.css`.
+1. Change `REVEAL_THEME:` to one of the available themes in `revealjs/css/theme` (e.g. `black` or `white`).
+2. Change `REVEAL_EXTRA_CSS` to `custom-light.css`.
+3. Call `load-theme` and switch to a light theme (for code blocks).
+4. Export as usual.
