@@ -53,16 +53,16 @@ net.predict_proba(X_test)
 [[./assets/hf.png]]
 ** About 🤗 Hugging Face
 We're going to look at:
-1. transformers
+1. transformers & tokenizers
 2. parameter efficient fine-tuning
 3. accelerate
 4. large language models
-* Transformers
+* Transformers & tokenizers
 ** Intro
-- most well known Hugging Face package
+- 🤗 transformers most well known Hugging Face package
 - used predominantly for /transformers/-based pretrained models
   + BERT, GPT, Falcon, Llama 2, etc.
-- also non-transformers models
+- 🤗 tokenizers provide a wide range of techniques and pretrained tokenizers (BPE, word piece, ...)
 ** Fine-tuning a BERT model -- PyTorch module
 #+BEGIN_SRC python
 from transformers import AutoModelForSequenceClassification
@@ -130,7 +130,7 @@ search.fit(X_train, y_train)
 - [[https://huggingface.co/docs/tokenizers/index][🤗 Tokenizers]]
 - [[https://skorch.readthedocs.io/en/stable/user/callbacks.html][skorch callbacks]]
 - [[https://skorch.readthedocs.io/en/stable/user/huggingface.html#tokenizers][skorch tokenizers docs]]
-- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Basic_Usage.ipynb#Usage-with-sklearn-GridSearchCV][Grid search]]
+- [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Basic_Usage.ipynb#Usage-with-sklearn-GridSearchCV][Grid searching with skorch]]
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_Finetuning.ipynb][Fine-tuning BERT notebook]]
 - [[https://nbviewer.org/github/skorch-dev/skorch/blob/master/notebooks/Hugging_Face_VisionTransformer.ipynb][Fine-tuning ViT notebook]]
 * PEFT: Parameter efficient fine-tuning
