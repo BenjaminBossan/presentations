@@ -1,0 +1,14 @@
+#+title: Fine-tuning large models on local hardware
+#+Author: Benjamin Bossan
+#+Date: 2024-07-11
+#+OPTIONS: toc:nil
+#+REVEAL_TITLE_SLIDE: %t
+#+MACRO: color @@html:<font color="$1">$2</font>@@
+#+REVEAL_THEME: black
+#+REVEAL_EXTRA_CSS: ./local.css
+#+REVEAL_SLIDE_FOOTER:
+#+OPTIONS: reveal_single_file:t
+#+OPTIONS: num:nil
+
+* Introduction
+** TODO
