@@ -10,5 +10,35 @@
 #+OPTIONS: reveal_single_file:t
 #+OPTIONS: num:nil
 
-* Introduction
-** TODO
+* The problem
+** Training a Llama model locally
+/show correct looking training code/
+What's wrong with this code?
+** Out of memory
+Even if the model perfectly fits into memory, training is not possible
+** Why so much memory is required
+/Calculation of memory needs/
+* Parameter-efficient fine-tuning methods
+** The general idea behind PEFT
+** LoRA: Low rank adapters
+- LoRA is the most popular parameter-efficient fine-tuning method
+- Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~
+- ~f(X) = W@X + b => f(X) = (W + W')@X + b~
+- ~W' = A@B~, where ~A~ and ~B~ are low rank
+https://arxiv.org/abs/2106.09685
+** LoRA illustrated
+#+CAPTION: LoRA illustrated
+[[./assets/lora.png]]
+* Results
+* Broader overview
+** PEFT methods that are implemented
+** LoRA options
+** Quantization
+** (Distributed) Training
+** Advanced features
+- loading multiple adapters
+- disabling adapters
+- merging into the base model
+- merging of LoRA adapaters
+- mixed LoRA adapter inference
+** Broader ecosystem
