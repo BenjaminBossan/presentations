@@ -15,9 +15,20 @@
 /show correct looking training code/
 What's wrong with this code?
 ** Out of memory
+/scary image of OOM error/
 Even if the model perfectly fits into memory, training is not possible
-** Why so much memory is required
-/Calculation of memory needs/
+** Why so much memory is required?
+Llama3 8B loaded in float16/bfloat16
+- Embedding: 525336576 => 1GB
+- Linear weights: 6979321856 => 13GB
+- LlamaRMSNorm: 266240 => 500KB
+total of **14GB** to load the model
+** Why so much memory is required?
+Training requires even more memory:
+- Gradients: same size as parameters
+- Adam optimizer: 2x the size of parameters
+- Activations: hard to tell, depends on data, model, etc.
+at least **56GB** required for full fine-tuning
 * Parameter-efficient fine-tuning methods
 ** The general idea behind PEFT
 ** LoRA: Low rank adapters
@@ -29,6 +40,7 @@ https://arxiv.org/abs/2106.09685
 ** LoRA illustrated
 #+CAPTION: LoRA illustrated
 [[./assets/lora.png]]
+** How come that more parameters require less memory?
 * Results
 * Broader overview
 ** PEFT methods that are implemented
