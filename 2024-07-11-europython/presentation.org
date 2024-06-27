@@ -17,25 +17,34 @@ What's wrong with this code?
 ** Out of memory
 /scary image of OOM error/
 Even if the model perfectly fits into memory, training is not possible
-** Why so much memory is required?
-Llama3 8B loaded in float16/bfloat16
-- Embedding: 525336576 => 1GB
-- Linear weights: 6979321856 => 13GB
-- LlamaRMSNorm: 266240 => 500KB
-total of **14GB** to load the model
-** Why so much memory is required?
+** Why do LLMs require so much memory?
+~Llama3 8B~ loaded in float16/bfloat16:
+| module           | # params      | size  |
+|------------------+---------------+-------|
+| Embedding        | 525,336,576   | 1GB   |
+| Linear (weights) | 6,979,321,856 | 13 GB |
+| LlamaRMSNorm     | 266,240       | 500KB |
+In total, loading the model requires **14GB**
+** Why do LLMs require so much memory?
 Training requires even more memory:
 - Gradients: same size as parameters
-- Adam optimizer: 2x the size of parameters
-- Activations: hard to tell, depends on data, model, etc.
-at least **56GB** required for full fine-tuning
+- Adam optimizer states: 2x the size of parameters
+This means we need **at least 56GB** to train Llama3 8B.
+On top of this, we need to consider the sizes of the activations, but those depends on data, model, etc.
 * Parameter-efficient fine-tuning methods
 ** The general idea behind PEFT
 ** LoRA: Low rank adapters
 - LoRA is the most popular parameter-efficient fine-tuning method
-- Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~
-- ~f(X) = W@X + b => f(X) = (W + W')@X + b~
-- ~W' = A@B~, where ~A~ and ~B~ are low rank
+- Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~ (e.g. ~W~ is 1024x1024, ~A~ is 1024x8 and ~B~ is 8x1024)
+\begin{equation}
+f(X) = W \cdot X + b
+\\
+f(X) = (W + \Delta W) \cdot X + b
+\end{equation}
+where
+\begin{equation}
+\Delta W = A \cdot B
+\end{equation}
 https://arxiv.org/abs/2106.09685
 ** LoRA illustrated
 #+CAPTION: LoRA illustrated

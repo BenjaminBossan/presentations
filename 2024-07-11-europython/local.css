@@ -10,3 +10,9 @@
 
 .reveal h3 {
   font-size: 0.8em; }
+
+.reveal ul, ol, div, p {
+  text-align: left;
+  padding-left: 0;
+  margin-left: 0;
+}
