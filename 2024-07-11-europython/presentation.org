@@ -93,8 +93,8 @@ Very simplied LoRA code for linear layers:
 class LoraLinear(nn.Linaer):
     def __init__(self, base_layer: nn.Linear, rank: int):
         self.base_layer = base_layer
-        self.lora_A = nn.Linear(base_layer.in_features, rank)
-        self.lora_B = nn.Linear(rank, base_layer.out_features)
+        self.lora_A = nn.Linear(base_layer.in_features, rank, bias=False)
+        self.lora_B = nn.Linear(rank, base_layer.out_features, bias=False)
 
     def forward(self, x):
         return self.base_layer(x) + self.lora_B(self.lora_A(x))
