@@ -7,11 +7,11 @@
    viewBox="0 0 296.64813 142.91704"
    version="1.1"
    id="svg5"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
    sodipodi:docname="lora.svg"
-   inkscape:export-filename="/home/vinh/work/presentations/2024-07-11-europython/assets/lora.png"
-   inkscape:export-xdpi="300"
-   inkscape:export-ydpi="300"
+   inkscape:export-filename="lora.png"
+   inkscape:export-xdpi="600"
+   inkscape:export-ydpi="600"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -26,19 +26,21 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="0.98520767"
-     inkscape:cx="542.52521"
-     inkscape:cy="261.36621"
-     inkscape:window-width="1850"
-     inkscape:window-height="1016"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:zoom="1.393294"
+     inkscape:cx="518.55529"
+     inkscape:cy="239.00195"
+     inkscape:window-width="2502"
+     inkscape:window-height="1371"
+     inkscape:window-x="1920"
+     inkscape:window-y="32"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1"
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
-     fit-margin-bottom="0" />
+     fit-margin-bottom="0"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1" />
   <defs
      id="defs2">
     <marker
@@ -359,7 +361,7 @@
            id="tspan27466"
            style="text-align:center;text-anchor:middle;stroke-width:0.264583"
            x="211.85498"
-           y="137.89726">Lora A</tspan><tspan
+           y="137.89726">LoRA A</tspan><tspan
            sodipodi:role="line"
            style="text-align:center;text-anchor:middle;stroke-width:0.264583"
            x="211.85498"
@@ -376,7 +378,7 @@
            style="stroke-width:0.264583"
            x="-114.39034"
            y="222.70995"
-           id="tspan29786">Lora B   N x r</tspan></text>
+           id="tspan29786">LoRA B   N x r</tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-weight:normal;font-size:5.64444px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#e3dedb;fill-opacity:1;stroke:none;stroke-width:0.264583"
@@ -623,5 +625,10 @@
            x="94.888763"
            y="106.76181">*</tspan></text>
     </g>
+    <path
+       style="fill:none;fill-opacity:1;stroke:#7d7d7d;stroke-width:1;stroke-dasharray:3, 3;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 63.734298,35.199193 V 171.73736"
+       id="path2"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>

@@ -1,9 +1,14 @@
+import argparse
 import json
 import sys
+import warnings
 from collections import defaultdict
 
 from accelerate.commands.estimate import create_empty_model
 from accelerate.utils.other import convert_bytes
+
+# suppress all warnings
+warnings.filterwarnings("ignore")
 
 dtype_to_bytes_linear = {"float32": 4, "float16": 2, "bfloat16": 2, "int8": 1, "int4": 0.5}
 # no quantization if not Linear, assume 16 bit instead
@@ -84,7 +89,7 @@ def get_training_memory_estimate(num_bytes):
     }
 
 
-def main(model_id, rank, dtype):
+def main(model_id, rank, dtype, sink=print):
     count_params = get_param_count(model_id, rank=rank)
     num_bytes = get_param_bytes(count_params, dtype=dtype)
     num_bytes_readable = {k: convert_bytes(v) for k, v in num_bytes.items()}
@@ -114,22 +119,17 @@ def main(model_id, rank, dtype):
     if dtype.startswith("int"):
         result["memory required for full fine-tuning"] += "*"
 
-    print(json.dumps(result, indent=2))
+    sink(json.dumps(result, indent=2))
 
     if dtype.startswith("int"):
-        print("*Note that quantized models cannot be fine-tuned without PEFT", file=sys.stderr)
-    return
+        sink("*Note that quantized models cannot be fine-tuned without PEFT", file=sys.stderr)
+    return result
 
 
 if __name__ == "__main__":
-    arg_model_id = sys.argv[1]
-
-    arg_rank = 8
-    if len(sys.argv) >= 3:
-        arg_rank = int(sys.argv[2])
-
-    arg_dtype = "float32"
-    if len(sys.argv) >= 4:
-        arg_dtype = sys.argv[3]
-    assert arg_dtype in ("float32", "float16", "bfloat16", "int8", "int4")
-    main(arg_model_id, rank=arg_rank, dtype=arg_dtype)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("model_id", type=str, help="Model name (on Hugging Face)")
+    parser.add_argument("--rank", type=int, default=8, help="Rank of LoRA adapter")
+    parser.add_argument("--dtype", type=str, default="float32", help="Data type, one of float32, float16, bfloat16, int8, int4")
+    args = parser.parse_args()
+    main(args.model_id, rank=args.rank, dtype=args.dtype)

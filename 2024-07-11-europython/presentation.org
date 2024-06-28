@@ -10,14 +10,49 @@
 #+OPTIONS: reveal_single_file:t
 #+OPTIONS: num:nil
 
+* Fine-tuning large models on local hardware
+slides available at:
+
+https://github.com/BenjaminBossan/presentations/
 * The problem
 ** Training a Llama model locally
-/show correct looking training code/
 What's wrong with this code?
-** Out of memory
-/scary image of OOM error/
-Even if the model perfectly fits into memory, training is not possible
-** Why do LLMs require so much memory?
+#+begin_src python
+import torch
+from transformers import AutoModelForCausalLM
+# ...
+model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+for batch in data_loader:
+    optimizer.zero_grad()
+    outputs = model(**batch)
+    outputs.loss.backward()
+    optimizer.step()
+#+end_src
+** Out of memory 😱
+#+begin_src bash
+  File "code/train.py", line 253, in <module>
+    train(args.model_id, args.rank, args.dtype, args.monitor_tensors, args.max_seq_length, args.batch_size, args.max_steps)
+  File "code/train.py", line 121, in train
+    model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "env/site-packages/transformers/models/auto/auto_factory.py", line 563, in from_pretrained
+    return model_class.from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "env/site-packages/transformers/modeling_utils.py", line 3754, in from_pretrained
+    ) = cls._load_pretrained_model(
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "env/site-packages/transformers/modeling_utils.py", line 4214, in _load_pretrained_model
+    new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "env/site-packages/transformers/modeling_utils.py", line 887, in _load_state_dict_into_meta_model
+    set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
+  File "env/site-packages/accelerate/utils/modeling.py", line 400, in set_module_tensor_to_device
+    new_value = value.to(device)
+                ^^^^^^^^^^^^^^^^
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 224.00 MiB. GPU
+#+end_src
+** LLMs are very hungry for memory
 ~Llama3 8B~ loaded in float16/bfloat16:
 | module           | # params      | size  |
 |------------------+---------------+-------|
@@ -25,41 +60,159 @@ Even if the model perfectly fits into memory, training is not possible
 | Linear (weights) | 6,979,321,856 | 13 GB |
 | LlamaRMSNorm     | 266,240       | 500KB |
 In total, loading the model requires **14GB**
-** Why do LLMs require so much memory?
-Training requires even more memory:
-- Gradients: same size as parameters
-- Adam optimizer states: 2x the size of parameters
-This means we need **at least 56GB** to train Llama3 8B.
-On top of this, we need to consider the sizes of the activations, but those depends on data, model, etc.
+** LLMs are very hungry for memory
+Training requires even more GPU memory:
+- Add gradients: same size as parameters
+- Add optimizer states: 2x the size of parameters
+- In total, we need enough memory for 4× the size of the model
+  - This means we need **at least 56GB** to train Llama3 8B.
 * Parameter-efficient fine-tuning methods
 ** The general idea behind PEFT
+- Provide a multitude of methods to decrease memory required for /training/
+- This is achieved by reducing the number of /trainable/ parameters
+- PEFT provides a bunch of utilities around this (more later)
+- No memory benefit for pure inference
+- Training is not necessarily faster (but often is in practice)
 ** LoRA: Low rank adapters
 - LoRA is the most popular parameter-efficient fine-tuning method
-- Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~ (e.g. ~W~ is 1024x1024, ~A~ is 1024x8 and ~B~ is 8x1024)
+- Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~ (e.g. ~W~ is 1024×1024, ~A~ is 8×1024 and ~B~ is 1024×8)
 \begin{equation}
-f(X) = W \cdot X + b
+f_{linear}(X) = W \cdot X + b
 \\
-f(X) = (W + \Delta W) \cdot X + b
-\end{equation}
-where
-\begin{equation}
-\Delta W = A \cdot B
+f_{lora}(X) = (W + \Delta W) \cdot X + b
+\\
+\Delta W = B \cdot A
 \end{equation}
 https://arxiv.org/abs/2106.09685
 ** LoRA illustrated
 #+CAPTION: LoRA illustrated
 [[./assets/lora.png]]
-** How come that more parameters require less memory?
-* Results
-* Broader overview
+** LoRA code
+Very simplied LoRA code for linear layers:
+#+begin_src python
+class LoraLinear(nn.Linaer):
+    def __init__(self, base_layer: nn.Linear, rank: int):
+        self.base_layer = base_layer
+        self.lora_A = nn.Linear(base_layer.in_features, rank)
+        self.lora_B = nn.Linear(rank, base_layer.out_features)
+
+    def forward(self, x):
+        return self.base_layer(x) + self.lora_B(self.lora_A(x))
+#+end_src
+** Wait a second: LoRA adds more parameters, how does that reduce the required memory?
+** Calculation of memory requirements
+- Remember: 3/4 of memory is reserved for gradients and optimizer states
+- Those are only required for /trainable/ parameters
+- LoRA drastically decreases the number of trainable parameters
+- Therefore, we need less memory despite having more parameters in total
+- Bonus: Only save the LoRA adapters in checkpoints: very small size
+** PEFT code
+#+begin_src python
+from transformers import AutoModelForCausalLM
+from peft import LoraConfig, get_peft_model
+
+base_model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
+config = LoraConfig(r=32)
+model = get_peft_model(base_model, config)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+for batch in data_loader:
+    ...
+#+end_src
+** Memory requirements for popular models
+| Model                        | Full fine-tuning (float16) | LoRA fine-tuning (rank 32) |
+|------------------------------+----------------------------+----------------------------|
+| meta-llama/Meta-Llama-3-8B   | 55.92 GB                   | /14.92 GB/                 |
+| meta-llama/Meta-Llama-3-70B  | 517.84 GB                  | 134.09 GB                  |
+| mistralai/Mistral-7B-v0.3    | 53.0 GB                    | /14.19 GB/                 |
+| Qwen/Qwen2-1.5B              | 11.5 GB                    | **3.29 GB**                |
+| Qwen/Qwen2-72B               | 532.42 GB                  | 137.81 GB                  |
+| google/gemma-2-9b            | 68.86 GB                   | /18.42 GB/                 |
+| google/gemma-2-27b           | 202.86 GB                  | 53.27 GB                   |
+* PEFT and quantization
+** Quantization of neural nets
+- Loading weights as float16 or float32 requires 4 and 8 bytes, respectively
+- Quantization: Load weights in lower precision, e.g. int4 or int8 => 0.5 and 1 byte, respectively
+- Going from float16 to int4: 4× memory reduction
+- However, lower precision results in degraded quality
+** Quantization code
+#+begin_src python
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+
+bnb_config = BitsAndBytesConfig(load_in_4bit=True, ...)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id, device_map=device_map, quantization_config=bnb_config
+)
+#+end_src
+** Training quantized models is not possible
+- Quantized weights are integers
+- Cannot calculate gradients for these weights
+- No gradients means no training
+** PEFT to the rescue
+- With LoRA and similar methods, we don't need gradients on the base model weights
+- LoRA weights are still loaded in float32 and can thus be updated
+- By combining quantization with LoRA, we get the trainable models with extra small memory footprints
+** Code for quantized LoRA (QLoRA)
+#+begin_src python
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model
+
+bnb_config = BitsAndBytesConfig(load_in_4bit=True, ...)
+base_model = AutoModelForCausalLM.from_pretrained(
+    model_id, device_map=device_map, quantization_config=bnb_config
+)
+config = LoraConfig(r=32)
+model = get_peft_model(base_model, config)
+for batch in data_loader:
+    ...
+#+end_src
+QLoRA: https://arxiv.org/abs/2305.14314
+** Memory requirements for popular models
+| Model                       | Full fine-tuning (int4) | LoRA fine-tuning (rank 32) |
+|-----------------------------+-------------------------+----------------------------|
+| meta-llama/Meta-Llama-3-8B  | 16.92 GB                | **5.17 GB**                |
+| meta-llama/Meta-Llama-3-70B | 135.34 GB               | 38.46 GB                   |
+| mistralai/Mistral-7B-v0.3   | 14.0 GB                 | **4.44 GB**                |
+| Qwen/Qwen2-1.5B             | 4.18 GB                 | **1.46 GB**                |
+| Qwen/Qwen2-72B              | 140.08 GB               | 39.73 GB                   |
+| google/gemma-2-9b           | 22.34 GB                | **6.79 GB**                |
+| google/gemma-2-27b          | 57.31 GB                | /16.88 GB/                 |
+* PEFT features
 ** PEFT methods that are implemented
+- AdaLoRA, IA³, Llama-Adapter, LoHa, LoKr, LoRA, Multitask Prompt Tuning, OFT, BOFT, Polytropon, P-tuning, Prefix Tuning, Prompt Tuning, LayerNorm Tuning, VeRA
+- Granular choice of what layers to target
+- Possibility for full fine-tuning of select layers if needed
 ** LoRA options
-** Quantization
-** (Distributed) Training
-** Advanced features
-- loading multiple adapters
-- disabling adapters
-- merging into the base model
-- merging of LoRA adapaters
-- mixed LoRA adapter inference
-** Broader ecosystem
+- Layer types: ~Linear, Conv2d, Embedding~
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/quantization][Quantization]]: bitsandbytes, GPTQ, AQLM, AWQ, EETQ, HQQ
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#initialization][Initialzation]]: RS LoRA, LoftQ, PiSSA, OLoRA
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#weight-decomposed-low-rank-adaptation-dora][DoRA]]: Weight-Decomposed Low-Rank Adaptation
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#memory-efficient-layer-replication-with-lora][Layer replication]]
+- Distributed training: DDP, [[https://huggingface.co/docs/peft/main/en/accelerate/deepspeed][DeepSpeed]], [[https://huggingface.co/docs/peft/main/en/accelerate/fsdp][FSDP]]
+** Advanced LoRA features in PEFT
+- Loading multiple adapters and switching
+- Batches containing [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#inference-with-different-lora-adapters-in-the-same-batch][mixed adapters]] for inference
+- Temporarily disabling adapters
+- Merging of LoRA into the base model
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/model_merging#merge-method][Merging of different LoRA adapaters]]
+- ~torch.compile~ [[https://huggingface.co/docs/peft/main/en/developer_guides/torch_compile][partially supported]]
+* Broader ecosystem
+** Hugging Face integrations
+- [[https://github.com/huggingface/diffusers/][🤗 diffusers]]: Training and serving LoRA adapters with diffusion models
+- [[https://huggingface.co/docs/transformers/index][🤗 transformers]]: Load LoRA adapters directly into transformers models:
+#+begin_src python
+model = AutoModel.from_pretrained(...)
+# add new adapter
+model.add_adapter(lora_config, adapter_name)
+# load trained adapter
+model.load_adapter(path_to_lora, adapter_name)
+# switch adapters
+model.set_adapter(adapter_name)
+#+end_src
+** Others
+More specialized tools that are optimized for specific models/use cases
+- [[https://github.com/unslothai/unsloth][Unsloth]]: Optimization for speed and even less memory
+- [[https://github.com/OpenAccess-AI-Collective/axolotl][axolotl]]: Streamlined fine-tuning incl. PEFT
+- [[https://github.com/pytorch/torchtune][torchtune]]: Pure PyTorch fine-tuning with optional conversion to PEFT
+- Serving hundreds of LoRA adapters efficiently: [[https://github.com/predibase/lorax][LoRAX]], [[https://github.com/punica-ai/punica][punica]], or [[https://github.com/S-LoRA/S-LoRA][S-LoRA]]
+* More resources
+* End slide
