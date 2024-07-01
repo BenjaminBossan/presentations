@@ -1,14 +1,41 @@
+"""Memory requirement utility
+
+The memory requirement in the tables of this presentation were calculated by
+using the included `utils.py` script. To run the script, make sure that
+`accelerate` is installed in your Python environment (`python -m pip install
+accelerate`). Executing the script does _not_ download the model or load it into
+memory. Therefore, you can all this for very large models without the risk to
+run out of memory.
+
+```bash
+# return memory estimate of Llama3 8B
+python utils.py "meta-llama/Meta-Llama-3-8B"
+# the same, but using rank 32 for LoRA
+python utils.py "meta-llama/Meta-Llama-3-8B" --rank 32
+# the same, but loading the model with 4bit quantization
+python utils.py "meta-llama/Meta-Llama-3-8B" --dtype int4
+```
+
+Note that for gated models, you need to have a Hugging Face account, accept the
+terms of the model, and log in to your Hugging Face account:
+https://huggingface.co/docs/huggingface_hub/en/quick-start#login-command.
+
+The size of the activations is not included in the estimate.
+
+"""
 import argparse
 import json
 import sys
 import warnings
 from collections import defaultdict
 
+import transformers
 from accelerate.commands.estimate import create_empty_model
 from accelerate.utils.other import convert_bytes
 
-# suppress all warnings
+# suppress all warnings and logs
 warnings.filterwarnings("ignore")
+transformers.logging.set_verbosity_error()
 
 dtype_to_bytes_linear = {"float32": 4, "float16": 2, "bfloat16": 2, "int8": 1, "int4": 0.5}
 # no quantization if not Linear, assume 16 bit instead
@@ -17,6 +44,7 @@ LORA = "lora"
 
 
 def get_num_params(param):  # from PEFT
+    """Get the number of parameters from an nn.Parameter"""
     num_params = param.numel()
     # if using DS Zero 3 and the weights are initialized empty
     if num_params == 0 and hasattr(param, "ds_numel"):
@@ -37,6 +65,7 @@ def get_num_params(param):  # from PEFT
 
 
 def get_param_count(model_id, rank):
+    """Get the number of parameters in a model, including LoRA parameters"""
     # this is only an approximation because we ignore buffers
     model = create_empty_model(model_id, "transformers")
 
@@ -60,6 +89,7 @@ def get_param_count(model_id, rank):
 
 
 def get_param_bytes(count_params, dtype):
+    """Get the number of bytes in a model, including LoRA parameters"""
     num_bytes = defaultdict(int)
     for key, val in count_params.items():
         if key == "Linear.weight":
@@ -75,11 +105,17 @@ def get_param_bytes(count_params, dtype):
 
 
 def get_training_memory_estimate(num_bytes):
-    # simplified assumptions: don't include activation size, automatic mixed precision, etc.
-    # we assume that Adam is used, which gives us:
-    # - size of model itself
-    # - size of gradients (trainable parameters only)
-    # - size of 1st and 2nd momentum of Adam (trainable parameters only)
+    """Get the memory estimate for fine-tuning a model
+
+    Simplified assumptions: don't include activation size, automatic mixed precision, etc.
+
+    We assume that Adam is used, which gives us:
+
+    - size of model itself
+    - size of gradients (trainable parameters only)
+    - size of 1st and 2nd momentum of Adam (trainable parameters only)
+
+    """
     total_size_base = sum(v for k, v in num_bytes.items() if k != LORA)
     total_size_lora = num_bytes[LORA]
     factor = 1 + 1 + 1
@@ -90,6 +126,16 @@ def get_training_memory_estimate(num_bytes):
 
 
 def main(model_id, rank, dtype, sink=print):
+    """Main function to calculate memory requirements of a model.
+
+    Outputs the results in JSON format.
+
+    Args:
+        model_id (str): Model name (on Hugging Face)
+        rank (int): Rank of LoRA adapter
+        dtype (str): Data type, one of float32, float16, bfloat16, int8, int4
+        sink (function): Function to print the result with (default: print).
+    """
     count_params = get_param_count(model_id, rank=rank)
     num_bytes = get_param_bytes(count_params, dtype=dtype)
     num_bytes_readable = {k: convert_bytes(v) for k, v in num_bytes.items()}
@@ -122,7 +168,7 @@ def main(model_id, rank, dtype, sink=print):
     sink(json.dumps(result, indent=2))
 
     if dtype.startswith("int"):
-        sink("*Note that quantized models cannot be fine-tuned without PEFT", file=sys.stderr)
+        print("*Note that quantized models cannot be fine-tuned without PEFT", file=sys.stderr)
     return result
 
 

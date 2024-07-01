@@ -20,6 +20,29 @@ The presentation is written as a org file, which is rendered directly on GitHub.
 
 To view the reveal.js presentation, download and open`presentation.html` in your favorite browser.
 
+## Memory requirement utility
+
+The memory requirement in the tables of this presentation were calculated by using the included `utils.py` script. To run the script, make sure that `accelerate` is installed in your Python environment (`python -m pip install accelerate`). Executing the script does _not_ download the model or load it into memory. Therefore, you can all this for very large models without the risk to run out of memory.
+
+```bash
+# return memory estimate of Llama3 8B
+python utils.py "meta-llama/Meta-Llama-3-8B"
+# the same, but using rank 32 for LoRA
+python utils.py "meta-llama/Meta-Llama-3-8B" --rank 32
+# the same, but loading the model with 4bit quantization
+python utils.py "meta-llama/Meta-Llama-3-8B" --dtype int4
+```
+
+Note that for gated models, you need to have a Hugging Face account, accept the terms of the model, and [log in to your Hugging Face account](https://huggingface.co/docs/huggingface_hub/en/quick-start#login-command).
+
+To run this on multiple models at a time and format the output in an org table, run the `org-table.py` script:
+
+```bash
+python org-table.py
+```
+
+It accepts the same arguments as `utils.py`, except that you can pass multiple, comma separated model ids.
+
 ## Editing the presentation
 
 To compile from source, open and edit `presentation.org` in Emacs and run `org-export-dispatch` > `export to reveal.js` > `export to file` in Emacs (C-c C-e v v).
