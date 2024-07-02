@@ -35,13 +35,17 @@ python utils.py "meta-llama/Meta-Llama-3-8B" --dtype int4
 
 Note that for gated models, you need to have a Hugging Face account, accept the terms of the model, and [log in to your Hugging Face account](https://huggingface.co/docs/huggingface_hub/en/quick-start#login-command).
 
-To run this on multiple models at a time and format the output in an org table, run the `org-table.py` script:
+To run this on multiple models at a time and format the output in a table, run the `org-table.py` script:
 
 ```bash
 python org-table.py
+# select models, rank, dtype
+python org-table.py --model_ids "meta-llama/Meta-Llama-3-8B,google/gemma-2-9b" --rank 32 --dtype int4
+# change output format to GitHub-flavored markdown
+python org-table.py --tablefmt github
 ```
 
-It accepts the same arguments as `utils.py`, except that you can pass multiple, comma separated model ids.
+It accepts the same arguments as `utils.py`, except that you can pass multiple, comma separated model ids. Running this script requires you to install the `accelerate` and `tabulate` packages (`python -m pip install accelerate tabulate`).
 
 ## Editing the presentation
 
