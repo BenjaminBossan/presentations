@@ -33,6 +33,39 @@ python utils.py "meta-llama/Meta-Llama-3-8B" --rank 32
 python utils.py "meta-llama/Meta-Llama-3-8B" --dtype int4
 ```
 
+Example output:
+
+```json
+{
+  "number of parameters": {
+    "Embedding.weight": 525336576,
+    "Linear.weight": 6979321856,
+    "lora": 20971520,
+    "LlamaRMSNorm.weight": 266240
+  },
+  "number of bytes": {
+    "Embedding.weight": 2101346304,
+    "Linear.weight": 27917287424,
+    "lora": 83886080,
+    "LlamaRMSNorm.weight": 1064960
+  },
+  "number of bytes (readable)": {
+    "Embedding.weight": "1.96 GB",
+    "Linear.weight": "26.0 GB",
+    "lora": "80.0 MB",
+    "LlamaRMSNorm.weight": "1.02 MB"
+  },
+  "total number of parameters w/o LoRA": 7504924672,
+  "total number of parameters w/  LoRA": 7525896192,
+  "total size w/o LoRA": 30019698688,
+  "total size w/  LoRA": 30103584768,
+  "total size w/o LoRA (readable)": "27.96 GB",
+  "total size w/  LoRA (readable)": "28.04 GB",
+  "memory required for full fine-tuning": "111.83 GB",
+  "memory required for LoRA fine-tuning": "28.19 GB"
+}
+```
+
 Note that for gated models, you need to have a Hugging Face account, accept the terms of the model, and [log in to your Hugging Face account](https://huggingface.co/docs/huggingface_hub/en/quick-start#login-command).
 
 To run this on multiple models at a time and format the output in a table, run the `org-table.py` script:
@@ -43,6 +76,15 @@ python org-table.py
 python org-table.py --model_ids "meta-llama/Meta-Llama-3-8B,google/gemma-2-9b" --rank 32 --dtype int4
 # change output format to GitHub-flavored markdown
 python org-table.py --tablefmt github
+```
+
+Example output:
+
+```org
+| Model                      | Full fine-tuning (float32)   | LoRA fine-tuning (rank 8)   |
+|----------------------------+------------------------------+-----------------------------|
+| meta-llama/Meta-Llama-3-8B | 111.83 GB                    | 28.19 GB                    |
+| google/gemma-2-9b          | 137.71 GB                    | 34.73 GB                    |
 ```
 
 It accepts the same arguments as `utils.py`, except that you can pass multiple, comma separated model ids. Running this script requires you to install the `accelerate` and `tabulate` packages (`python -m pip install accelerate tabulate`).
