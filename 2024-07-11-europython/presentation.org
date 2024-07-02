@@ -14,6 +14,7 @@
 slides are available at:
 
 https://github.com/BenjaminBossan/presentations/
+[[./assets/qr.png]]
 * The problem
 ** Training a Llama model locally
 What's wrong with this code?
@@ -21,7 +22,7 @@ What's wrong with this code?
 import torch
 from transformers import AutoModelForCausalLM
 # ...
-model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
+model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cuda")
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
 for batch in data_loader:
     optimizer.zero_grad()
@@ -67,12 +68,15 @@ Training requires even more GPU memory:
 - In total, we need enough memory for 4× the size of the model
   - This means we need **at least 56GB** to train Llama3 8B.
 * Parameter-efficient fine-tuning methods
-** The general idea behind PEFT
-- Provide a multitude of methods to decrease memory required for /training/
-- This is achieved by reducing the number of /trainable/ parameters
-- PEFT provides a bunch of utilities around this (more later)
-- No memory benefit for pure inference
+** The general idea behind 🤗 PEFT
+- Multitude of methods to decrease memory required for /training/
+- Achieved by reducing the number of /trainable/ parameters
+- Many convience functions (more later)
+
+However:
+
 - Training is not necessarily faster (but often is in practice)
+- /No/ memory benefit for inference
 ** LoRA: Low rank adapters
 - LoRA is the most popular parameter-efficient fine-tuning method
 - Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~ (e.g. ~W~ is 1024×1024, ~A~ is 8×1024 and ~B~ is 1024×8)
@@ -152,6 +156,7 @@ model = AutoModelForCausalLM.from_pretrained(
 - LoRA weights are still loaded in float32 and can thus be updated
 - By combining quantization with LoRA, we get the trainable models with extra small memory footprints
 ** Code for quantized LoRA (QLoRA)
+Using [[https://github.com/TimDettmers/bitsandbytes][bitsandbytes]]
 #+begin_src python
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model
@@ -165,7 +170,7 @@ model = get_peft_model(base_model, config)
 for batch in data_loader:
     ...
 #+end_src
-QLoRA: https://arxiv.org/abs/2305.14314
+https://arxiv.org/abs/2305.14314
 ** Memory requirements for popular models
 | Model                       | Full fine-tuning (int4) | LoRA fine-tuning (rank 32) |
 |-----------------------------+-------------------------+----------------------------|
@@ -181,7 +186,7 @@ QLoRA: https://arxiv.org/abs/2305.14314
 - Adapter methods other than LoRA:
   * Specific for language models: Llama-Adapter, Multitask Prompt Tuning, P-tuning, Prefix Tuning, Prompt Tuning
   * Especially parameter efficient: AdaLoRA, IA³, LayerNorm Tuning, VeRA
-  * Especially for diffusion models: LoHa, LoKr, OFT, BOFT
+  * Good for diffusion models: LoHa, LoKr, OFT, BOFT
   * Routing: Polytropon
 - Granular choice of what layers to target
 - Possibility for full fine-tuning of select layers if needed (~modules_to_save~)
@@ -212,8 +217,16 @@ loaded = PeftModel.from_pretrained(base_model, path)
 - Temporarily disabling adapters
 - Merging of LoRA into the base model
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/model_merging#merge-method][Merging of different LoRA adapaters]]
-- ~torch.compile~ [[https://huggingface.co/docs/peft/main/en/developer_guides/torch_compile][partially supported]]
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/torch_compile][partial support]] for ~torch.compile~
 ** Tips for getting started
+- Start with small model, increase size when necessary
+- If LLM, check if better prompting is enough
+- If not, try LoRA first: most help online, feature rich
+- Do a quick end-to-end run first
+- LLM: Start by targeting all linear layers (~target_modules="all-linear"~)
+- Increase rank if underfitting, decrease if overfitting
+- Try higher learning rate, greater batch size
+- Try different [[https://huggingface.co/docs/peft/developer_guides/lora#initialization][initialization schemes]] (esp. when quantizing)
 * Broader ecosystem
 ** Hugging Face integrations
 - [[https://huggingface.co/docs/hub/index][🤗 Hugging Face Hub]]: PEFT adapters can be loaded from, and saved to, the HF Hub
@@ -239,4 +252,4 @@ More specialized tools that are optimized for specific models/use cases
 - [[https://huggingface.co/docs/peft/index][PEFT docs]]
 - [[https://github.com/huggingface/peft][PEFT GitHub repo]]
 - Slides: https://github.com/BenjaminBossan/presentations/
-* End slide
+[[./assets/qr.png]]
