@@ -90,7 +90,7 @@ Training requires even more GPU memory:
 #+attr_reveal: :frag (frag-style)
 - Multitude of methods to decrease memory required for /training/
 - Achieved by reducing the number of /trainable/ parameters
-- Many convience functions
+- Many convenience functions
 #+attr_reveal: :frag (frag-style)
 However:
 #+attr_reveal: :frag (frag-style)
@@ -246,7 +246,7 @@ loaded = PeftModel.from_pretrained(base_model, path)
 ** LoRA options
 - Layer types: ~Linear, Conv2d, Embedding~
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/quantization][Quantization]]: bitsandbytes, GPTQ, AQLM, AWQ, EETQ, HQQ
-- [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#initialization][Initialzation]]: RS LoRA, LoftQ, PiSSA, OLoRA
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#initialization][Initialization]]: RS LoRA, LoftQ, PiSSA, OLoRA
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#weight-decomposed-low-rank-adaptation-dora][DoRA]]: Weight-Decomposed Low-Rank Adaptation
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#memory-efficient-layer-replication-with-lora][Layer replication]]
 - Distributed training: DDP, [[https://huggingface.co/docs/peft/main/en/accelerate/deepspeed][DeepSpeed]], [[https://huggingface.co/docs/peft/main/en/accelerate/fsdp][FSDP]]
@@ -256,7 +256,7 @@ loaded = PeftModel.from_pretrained(base_model, path)
 - [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/lora#peft.LoraModel.merge_and_unload][Merging]] into the base model
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/torch_compile][partial support]] for ~torch.compile~
 - Batches containing [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#inference-with-different-lora-adapters-in-the-same-batch][mixed LoRA adapters]] for inference
-- [[https://huggingface.co/docs/peft/main/en/developer_guides/model_merging#merge-method][Merging of different LoRA adapaters]]
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/model_merging#merge-method][Merging of different LoRA adapters]]
 ** Tips for getting started
 #+attr_reveal: :frag (frag-style)
 - Start with small model, increase size only when necessary
