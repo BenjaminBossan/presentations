@@ -1,5 +1,9 @@
 # Presentations
 
+## 2024-07-11 EuroPython Prague
+
+[Slides](https://github.com/BenjaminBossan/presentations/blob/master/2024-07-11-europython/presentation.org "slides")
+
 ## 2023-09-14 PyData Amsterdam Conference
 
 [Slides](https://github.com/BenjaminBossan/presentations/blob/master/2023-09-14-pydata/presentation.org "slides")
