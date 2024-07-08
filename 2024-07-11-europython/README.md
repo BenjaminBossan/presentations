@@ -112,5 +112,5 @@ To get reveal.js, there are two options:
 
 1. Change `REVEAL_THEME:` to one of the available themes in `revealjs/css/theme` (e.g. `black` or `white`).
 2. Change `REVEAL_EXTRA_CSS` to `custom-light.css`.
-3. Call `load-theme` and switch to a light theme (for code blocks).
+3. Call `load-theme` and switch to a light theme (for code blocks), e.g. `solarized-light`
 4. Export as usual.
