@@ -214,18 +214,6 @@ Paper: https://arxiv.org/abs/2305.14314
 - Increase rank if underfitting, decrease if overfitting
 - Try higher learning rate, greater batch size
 - Try different [[https://huggingface.co/docs/peft/developer_guides/lora#initialization][initialization schemes]] (esp. when quantizing)
-* Broader ecosystem
-** Hugging Face integrations
-- [[https://huggingface.co/docs/hub/index][🤗 Hugging Face Hub]]: Load from, and save to, the HF Hub
-- [[https://github.com/huggingface/diffusers/][🤗 Diffusers]]: Diffusion models with LoRA
-- [[https://huggingface.co/docs/trl/index][🤗 TRL]]: Easy reinforcement learning with PEFT model
-- [[https://huggingface.co/docs/transformers/index][🤗 Transformers]]: Load LoRA [[https://huggingface.co/docs/transformers/v4.42.0/en/peft][directly]] into transformers models
-** Fine-tuning community
-More specialized tools that are optimized for specific models/use cases
-- [[https://github.com/unslothai/unsloth][unsloth]]: Optimization for speed and even less memory
-- [[https://github.com/OpenAccess-AI-Collective/axolotl][axolotl]]: Streamlined fine-tuning scripts, incl. PEFT
-- [[https://github.com/pytorch/torchtune][torchtune]]: Pure PyTorch fine-tuning, optional conversion to PEFT
-- Serving hundreds of LoRA adapters efficiently: [[https://github.com/predibase/lorax][LoRAX]], [[https://github.com/punica-ai/punica][punica]], or [[https://github.com/S-LoRA/S-LoRA][S-LoRA]]
 * More resources
 - [[https://huggingface.co/docs/peft/index][PEFT docs]]
 - [[https://github.com/huggingface/peft][PEFT GitHub repo]]
@@ -288,3 +276,14 @@ merged = loaded.merge_and_unload()
   * batch in the middle can suddenly result in OOM
   * peak memory activation can be higher than calculated
 - Further resources: [[https://kipp.ly/transformer-inference-arithmetic/][Transformer Inference Arithmetic]], [[https://blog.eleuther.ai/transformer-math/#activations-and-batch-size][Transformer Math 101]], [[https://github.com/EleutherAI/cookbook/tree/main/calc#calculating-memory-overhead][activation memory calculation script]]
+** Hugging Face integrations
+- [[https://huggingface.co/docs/hub/index][🤗 Hugging Face Hub]]: Load from, and save to, the HF Hub
+- [[https://github.com/huggingface/diffusers/][🤗 Diffusers]]: Diffusion models with LoRA
+- [[https://huggingface.co/docs/trl/index][🤗 TRL]]: Easy reinforcement learning with PEFT model
+- [[https://huggingface.co/docs/transformers/index][🤗 Transformers]]: Load LoRA [[https://huggingface.co/docs/transformers/v4.42.0/en/peft][directly]] into transformers models
+** Fine-tuning community
+More specialized tools that are optimized for specific models/use cases
+- [[https://github.com/unslothai/unsloth][unsloth]]: Optimization for speed and even less memory
+- [[https://github.com/OpenAccess-AI-Collective/axolotl][axolotl]]: Streamlined fine-tuning scripts, incl. PEFT
+- [[https://github.com/pytorch/torchtune][torchtune]]: Pure PyTorch fine-tuning, optional conversion to PEFT
+- Serving hundreds of LoRA adapters efficiently: [[https://github.com/predibase/lorax][LoRAX]], [[https://github.com/punica-ai/punica][punica]], or [[https://github.com/S-LoRA/S-LoRA][S-LoRA]]
