@@ -19,12 +19,13 @@ https://github.com/BenjaminBossan/presentations/
 #+attr_html: :width 250px :align center
 [[./assets/qr.png]]
 * The problem
-** Training a Llama model locally
+** Training Llama 3 locally
 What's wrong with this code?
 #+begin_src python
 import torch
 from transformers import AutoModelForCausalLM
 # ...
+model_id = "meta-llama/Meta-Llama-3-8B"
 model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cuda")
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
 for batch in data_loader:
@@ -39,22 +40,22 @@ for batch in data_loader:
 :END:
 #+begin_src bash
   File "code/train.py", line 253, in <module>
-    train(args.model_id, args.rank, args.dtype, args.monitor_tensors, args.max_seq_length, args.batch_size, args.max_steps)
+    train(args.model_id, args.rank, args.dtype, args.monitor_tensors, ...)
   File "code/train.py", line 121, in train
     model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "env/site-packages/transformers/models/auto/auto_factory.py", line 563, in from_pretrained
+  File "transformers/models/auto/auto_factory.py", line 563, in from_pretrained
     return model_class.from_pretrained(
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "env/site-packages/transformers/modeling_utils.py", line 3754, in from_pretrained
+  File "transformers/modeling_utils.py", line 3754, in from_pretrained
     ) = cls._load_pretrained_model(
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "env/site-packages/transformers/modeling_utils.py", line 4214, in _load_pretrained_model
+  File "transformers/modeling_utils.py", line 4214, in _load_pretrained_model
     new_error_msgs, offload_index, state_dict_index = _load_state_dict_into_meta_model(
                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "env/site-packages/transformers/modeling_utils.py", line 887, in _load_state_dict_into_meta_model
+  File "transformers/modeling_utils.py", line 887, in _load_state_dict_into_meta_model
     set_module_tensor_to_device(model, param_name, param_device, **set_module_kwargs)
-  File "env/site-packages/accelerate/utils/modeling.py", line 400, in set_module_tensor_to_device
+  File "accelerate/utils/modeling.py", line 400, in set_module_tensor_to_device
     new_value = value.to(device)
                 ^^^^^^^^^^^^^^^^
 torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 224.00 MiB. GPU
@@ -70,9 +71,9 @@ In total, loading the model requires **14GB**
 ** Calculation of memory requirements
 Training requires even more GPU memory:
 #+attr_reveal: :frag (frag-style)
-- Gradients: same size as parameters
-- Optimizer states: 2x the size of parameters
-- In total, we need enough memory for 4× the size of the model
+- Gradients: same size as model parameters
+- Optimizer states: 2× the size of parameters
+- In total, we need memory for 4× the size of the model
   * Training Llama3 8B requires **at least 56GB**
 ** Calculation of memory requirements
 | Model                       | Full fine-tuning (float16) |
@@ -86,7 +87,7 @@ Training requires even more GPU memory:
 | google/gemma-2-27b          | 202.86 GB                  |
 
 * Parameter-efficient fine-tuning
-** 🤗 PEFT
+** 🤗 PEFT package
 #+attr_reveal: :frag (frag-style)
 - Multitude of methods to decrease memory required for /training/
 - Achieved by reducing the number of /trainable/ parameters
@@ -94,51 +95,38 @@ Training requires even more GPU memory:
 #+attr_reveal: :frag (frag-style)
 However:
 #+attr_reveal: :frag (frag-style)
-- Training is not necessarily faster (but often is in practice)
 - No memory benefit for inference
+- Training is not necessarily faster (but often is in practice)
 ** LoRA: Low rank adapters
-LoRA is the most popular parameter-efficient fine-tuning method
-
-Paper: https://arxiv.org/abs/2106.09685
+#+attr_reveal: :frag (frag-style)
+- LoRA is the most popular parameter-efficient fine-tuning method
+- Paper: https://arxiv.org/abs/2106.09685
+- Method is quite straightforward to explain
 ** LoRA: Low rank adapters
-Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~, e.g.:
+Decompose updates of weight ~W~ into two low rank matrices ~A~ and ~B~, e.g. for rank 8:
 
-~W~ is 1024×1024
+~W~ is 1000×1000
 
-~A~ is 8×1024
+~A~ is 8×1000
 
-~B~ is 1024×8
+~B~ is 1000×8
 
 \begin{equation}
 h_{linear} = W \cdot X + b
 \\
-h_{lora} = (W + \Delta W) \cdot X + b
+h_{lora} = (W^{*} + \Delta W) \cdot X + b
 \\
 \Delta W = B \cdot A
 \end{equation}
-** LoRA illustrated
-#+CAPTION: LoRA illustrated
-[[./assets/lora.png]]
-** LoRA code
-Simplified LoRA code for linear layers:
-#+begin_src python
-class LoraLinear(nn.Linear):
-    def __init__(self, base_layer: nn.Linear, rank: int):
-        self.base_layer = base_layer
-        self.lora_A = nn.Linear(base_layer.in_features, rank, bias=False)
-        self.lora_B = nn.Linear(rank, base_layer.out_features, bias=False)
-
-    def forward(self, x):
-        return self.base_layer(x) + self.lora_B(self.lora_A(x))
-#+end_src
 ** PEFT code
 #+begin_src python
-from transformers import AutoModelForCausalLM
-from peft import LoraConfig, get_peft_model
-
 base_model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
-config = LoraConfig(r=32)
+
+# pip install peft
+from peft import LoraConfig, get_peft_model
+config = LoraConfig(r=...)
 model = get_peft_model(base_model, config)
+
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
 for batch in data_loader:
     ...
@@ -146,9 +134,9 @@ for batch in data_loader:
 ** Wait a second: LoRA adds more parameters, how does that reduce the required memory?
 ** Calculation of memory requirements: revisited
 #+attr_reveal: :frag (frag-style)
-- Remember: 3/4 of memory is reserved for gradients and optimizer states
+- Remember: 3/4 of training memory is reserved for gradients and optimizer states
 - Only required for /trainable/ parameters
-- LoRA decreases number of trainable parameters
+- LoRA requires only a tiny number of trainable parameters (often <1%)
 - → less memory despite having more parameters in total
 - Bonus: Only save the LoRA weights: very small file size
 ** Calculation of memory requirements with PEFT
@@ -161,53 +149,26 @@ for batch in data_loader:
 | Qwen/Qwen2-72B              | 532.42 GB                  | 137.81 GB                  |
 | google/gemma-2-9b           | 68.86 GB                   | /18.42 GB/                 |
 | google/gemma-2-27b          | 202.86 GB                  | 53.27 GB                   |
-** Calculation of memory requirements with PEFT
-This is already great but we can do even better!
 * PEFT and quantization
 ** Quantization of neural nets
 #+attr_reveal: :frag (frag-style)
 - Usually, weights are loaded as floats:
-  * float32 requires 8 bytes
-  * float16 requires 4 bytes
+  * float32 requires 4 bytes
+  * bfloat16/float16 requires 2 bytes
 - Quantization: Load weights in lower precision
   * int8 requires 1 byte
   * int4 requires 0.5 bytes
 - Going from float16 to int4: 4× memory reduction
 - However, lower precision results in degraded quality
-** Quantization code
-#+begin_src python
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig
-
-bnb_config = BitsAndBytesConfig(load_in_4bit=True, ...)
-model = AutoModelForCausalLM.from_pretrained(
-    model_id, device_map=device_map, quantization_config=bnb_config
-)
-#+end_src
 ** Training quantized models is not possible
 - Quantized weights are integers
 - Gradients for these weights cannot be calculated
 - No gradients means no training
-** PEFT to the rescue
+** PEFT allows us to train quantized models
 - With LoRA and similar methods, we don't need gradients on the base model weights
 - LoRA weights are still loaded in float32 → gradients → training
 - Quantization + LoRA = QLoRA: training with extra small memory footprints
 Paper: https://arxiv.org/abs/2305.14314
-** Code for quantized LoRA (QLoRA)
-Using [[https://github.com/TimDettmers/bitsandbytes][bitsandbytes]]
-#+begin_src python
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig
-from peft import LoraConfig, get_peft_model
-
-bnb_config = BitsAndBytesConfig(load_in_4bit=True, ...)
-base_model = AutoModelForCausalLM.from_pretrained(
-    model_id, device_map=device_map, quantization_config=bnb_config
-)
-config = LoraConfig(r=32)
-model = get_peft_model(base_model, config)
-for batch in data_loader:
-    ...
-#+end_src
-[[https://huggingface.co/blog/4bit-transformers-bitsandbytes][blog post]]
 ** Memory requirements for popular models
 | Model                       | Full fine-tuning (int4) | LoRA fine-tuning (rank 32) |
 |-----------------------------+-------------------------+----------------------------|
@@ -222,27 +183,13 @@ for batch in data_loader:
 ** Flexibility when it comes to models and adapter methods
 #+attr_reveal: :frag (frag-style)
 - Adapter methods other than LoRA:
-  * Especially parameter efficient: AdaLoRA, IA³, LayerNorm Tuning, VeRA
+  * Especially parameter efficient: AdaLoRA, IA³, FourierFT, LayerNorm Tuning, VeRA
   * Specific for language models: Llama-Adapter, Multitask Prompt Tuning, P-tuning, Prefix Tuning, Prompt Tuning
   * Good for diffusion models: LoHa, LoKr, OFT, BOFT
-  * Routing: Polytropon
+  * Routing: Polytropon, X-LoRA
 #+attr_reveal: :frag (frag-style)
 - Granular choice of what layers to target
 - Possibility for full fine-tuning of select layers if needed (~modules_to_save~)
-** Flexibility when it comes to models and adapter methods
-#+begin_src python
-from peft import LoraConfig, PeftModel, get_peft_model
-
-base_model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
-config = LoraConfig(rank=16, target_modules=[...], modules_to_save=[...])
-model = get_peft_model(base_model, config)
-# train
-...
-model.save_pretrained(<path>)
-# later
-base_model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
-loaded = PeftModel.from_pretrained(base_model, path)
-#+end_src
 ** LoRA options
 - Layer types: ~Linear, Conv2d, Embedding~
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/quantization][Quantization]]: bitsandbytes, GPTQ, AQLM, AWQ, EETQ, HQQ
@@ -252,15 +199,15 @@ loaded = PeftModel.from_pretrained(base_model, path)
 - Distributed training: DDP, [[https://huggingface.co/docs/peft/main/en/accelerate/deepspeed][DeepSpeed]], [[https://huggingface.co/docs/peft/main/en/accelerate/fsdp][FSDP]]
 ** Advanced features in PEFT
 - [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/peft_model#peft.PeftModel.load_adapter][Loading]] multiple adapters and [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/peft_model#peft.PeftModel.set_adapter][switching]]
-- Temporarily [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/peft_model#peft.PeftModel.disable_adapter][disabling]] adapters
+- [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/peft_model#peft.PeftModel.disable_adapter][Disabling]] adapters
 - [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/lora#peft.LoraModel.merge_and_unload][Merging]] into the base model
-- [[https://huggingface.co/docs/peft/main/en/developer_guides/torch_compile][partial support]] for ~torch.compile~
 - Batches containing [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#inference-with-different-lora-adapters-in-the-same-batch][mixed LoRA adapters]] for inference
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/model_merging#merge-method][Merging of different LoRA adapters]]
+- [[https://huggingface.co/docs/peft/main/en/developer_guides/torch_compile][partial support]] for ~torch.compile~
 ** Tips for getting started
 #+attr_reveal: :frag (frag-style)
 - Start with small model, increase size only when necessary
-- Check if better prompting is not enough (LLM)
+- Check if better prompting is enough (LLM)
 - Try LoRA first: most help online, feature rich
 - Do a quick end-to-end run before full training
 - Start by targeting all linear layers (~target_modules="all-linear"~)
@@ -270,10 +217,10 @@ loaded = PeftModel.from_pretrained(base_model, path)
 * Broader ecosystem
 ** Hugging Face integrations
 - [[https://huggingface.co/docs/hub/index][🤗 Hugging Face Hub]]: Load from, and save to, the HF Hub
-- [[https://github.com/huggingface/diffusers/][🤗 diffusers]]: Diffusion models with LoRA
+- [[https://github.com/huggingface/diffusers/][🤗 Diffusers]]: Diffusion models with LoRA
 - [[https://huggingface.co/docs/trl/index][🤗 TRL]]: Easy reinforcement learning with PEFT model
-- [[https://huggingface.co/docs/transformers/index][🤗 transformers]]: Load LoRA directly into transformers models:
-** Others
+- [[https://huggingface.co/docs/transformers/index][🤗 Transformers]]: Load LoRA [[https://huggingface.co/docs/transformers/v4.42.0/en/peft][directly]] into transformers models
+** Fine-tuning community
 More specialized tools that are optimized for specific models/use cases
 - [[https://github.com/unslothai/unsloth][unsloth]]: Optimization for speed and even less memory
 - [[https://github.com/OpenAccess-AI-Collective/axolotl][axolotl]]: Streamlined fine-tuning scripts, incl. PEFT
@@ -282,6 +229,62 @@ More specialized tools that are optimized for specific models/use cases
 * More resources
 - [[https://huggingface.co/docs/peft/index][PEFT docs]]
 - [[https://github.com/huggingface/peft][PEFT GitHub repo]]
-- Slides: https://github.com/BenjaminBossan/presentations/
+- Slides and memory calculation script:
+
+  https://github.com/BenjaminBossan/presentations/
 #+attr_html: :width 250px :align center
 [[./assets/qr.png]]
+* Extra slides
+** LoRA illustrated
+#+CAPTION: LoRA illustrated
+[[./assets/lora.png]]
+** LoRA code
+Simplified LoRA code for linear layers:
+#+begin_src python
+class LoraLinear(nn.Module):
+    def __init__(self, base_layer: nn.Linear, rank: int):
+        self.base_layer = base_layer
+        self.lora_A = nn.Linear(base_layer.in_features, rank, bias=False)
+        self.lora_B = nn.Linear(rank, base_layer.out_features, bias=False)
+
+    def forward(self, x):
+        return self.base_layer(x) + self.lora_B(self.lora_A(x))
+#+end_src
+** Code for quantized LoRA (QLoRA)
+Using [[https://github.com/TimDettmers/bitsandbytes][bitsandbytes]]
+#+begin_src python
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model
+
+bnb_config = BitsAndBytesConfig(load_in_4bit=True, ...)
+base_model = AutoModelForCausalLM.from_pretrained(
+    model_id, device_map=device_map, quantization_config=bnb_config
+)
+config = LoraConfig(r=...)
+model = get_peft_model(base_model, config)
+for batch in data_loader:
+    ...
+#+end_src
+[[https://huggingface.co/blog/4bit-transformers-bitsandbytes][blog post]]
+** Flexibility when it comes to models and adapter methods
+#+begin_src python
+from peft import LoraConfig, PeftModel, get_peft_model
+
+base_model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
+config = LoraConfig(rank=32, target_modules=[...], modules_to_save=[...])
+model = get_peft_model(base_model, config)
+# train
+...
+model.save_pretrained(<path>)
+# later
+base_model = AutoModelForCausalLM.from_pretrained(model_id, device_map=device_map)
+loaded = PeftModel.from_pretrained(base_model, path)
+# optional: faster inference
+merged = loaded.merge_and_unload()
+#+end_src
+** Memory for activations
+- Unfortunately, it's complicated:
+  * factors: model architecture, batch size, sequence length, mixed precision, activation checkpointing, key-value cache, distributed learning, ...
+  * batch in the middle can suddenly result in OOM
+  * peak memory activation can be higher than calculated
+- Further resources: [[https://kipp.ly/transformer-inference-arithmetic/][Transformer Inference Arithmetic]], [[https://blog.eleuther.ai/transformer-math/#activations-and-batch-size][Transformer Math 101]], [[https://github.com/EleutherAI/cookbook/tree/main/calc#calculating-memory-overhead][activation memory calculation script]]
