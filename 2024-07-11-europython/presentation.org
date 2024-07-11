@@ -97,7 +97,7 @@ Training requires even more GPU memory:
 However:
 #+attr_reveal: :frag (frag-style)
 - No memory benefit for inference
-- Full fine-tuning often produces best best results
+- Full fine-tuning often produces best results
 - Training is not necessarily faster (but often is in practice)
 ** LoRA: Low rank adapters
 #+attr_reveal: :frag (frag-style)
@@ -196,9 +196,9 @@ Paper: https://arxiv.org/abs/2305.14314
 - Layer types: ~Linear, Conv2d, Embedding~
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/quantization][Quantization]]: bitsandbytes, GPTQ, AQLM, AWQ, EETQ, HQQ
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#initialization][Initialization]]: RS LoRA, LoftQ, PiSSA, OLoRA
+- Distributed training: DDP, [[https://huggingface.co/docs/peft/main/en/accelerate/deepspeed][DeepSpeed]], [[https://huggingface.co/docs/peft/main/en/accelerate/fsdp][FSDP]]
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#weight-decomposed-low-rank-adaptation-dora][DoRA]]: Weight-Decomposed Low-Rank Adaptation
 - [[https://huggingface.co/docs/peft/main/en/developer_guides/lora#memory-efficient-layer-replication-with-lora][Layer replication]]
-- Distributed training: DDP, [[https://huggingface.co/docs/peft/main/en/accelerate/deepspeed][DeepSpeed]], [[https://huggingface.co/docs/peft/main/en/accelerate/fsdp][FSDP]]
 ** Advanced features in PEFT
 - [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/peft_model#peft.PeftModel.load_adapter][Loading]] multiple adapters and [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/peft_model#peft.PeftModel.set_adapter][switching]]
 - [[https://huggingface.co/docs/peft/v0.11.0/en/package_reference/peft_model#peft.PeftModel.disable_adapter][Disabling]] adapters
