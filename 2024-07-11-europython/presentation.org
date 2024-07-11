@@ -20,7 +20,6 @@ https://github.com/BenjaminBossan/presentations/
 [[./assets/qr.png]]
 * The problem
 ** Training Llama 3 locally
-What's wrong with this code?
 #+begin_src python
 import torch
 from transformers import AutoModelForCausalLM
@@ -34,6 +33,8 @@ for batch in data_loader:
     outputs.loss.backward()
     optimizer.step()
 #+end_src
+#+attr_reveal: :frag (frag-style)
+What's wrong with this code?
 ** Out of memory 😱
 :PROPERTIES:
 :reveal_background: linear-gradient(to left, #910830, #521623)
@@ -96,6 +97,7 @@ Training requires even more GPU memory:
 However:
 #+attr_reveal: :frag (frag-style)
 - No memory benefit for inference
+- Full fine-tuning often produces best best results
 - Training is not necessarily faster (but often is in practice)
 ** LoRA: Low rank adapters
 #+attr_reveal: :frag (frag-style)
@@ -169,16 +171,16 @@ for batch in data_loader:
 - LoRA weights are still loaded in float32 → gradients → training
 - Quantization + LoRA = QLoRA: training with extra small memory footprints
 Paper: https://arxiv.org/abs/2305.14314
-** Memory requirements for popular models
-| Model                       | Full fine-tuning (int4) | LoRA fine-tuning (rank 32) |
-|-----------------------------+-------------------------+----------------------------|
-| meta-llama/Meta-Llama-3-8B  | 16.92 GB                | **5.17 GB**                |
-| meta-llama/Meta-Llama-3-70B | 135.34 GB               | 38.46 GB                   |
-| mistralai/Mistral-7B-v0.3   | 14.0 GB                 | **4.44 GB**                |
-| Qwen/Qwen2-1.5B             | 4.18 GB                 | **1.46 GB**                |
-| Qwen/Qwen2-72B              | 140.08 GB               | 39.73 GB                   |
-| google/gemma-2-9b           | 22.34 GB                | **6.79 GB**                |
-| google/gemma-2-27b          | 57.31 GB                | /16.88 GB/                 |
+** Memory requirements for popular models (rank 32, int4)
+| Model                       | LoRA fine-tuning | QLoRA fine-tuning |
+|-----------------------------+------------------+-------------------|
+| meta-llama/Meta-Llama-3-8B  | /14.92 GB/       | **5.17 GB**       |
+| meta-llama/Meta-Llama-3-70B | 134.09 GB        | 38.46 GB          |
+| mistralai/Mistral-7B-v0.3   | /14.19 GB/       | **4.44 GB**       |
+| Qwen/Qwen2-1.5B             | **3.29 GB**      | **1.46 GB**       |
+| Qwen/Qwen2-72B              | 137.81 GB        | 39.73 GB          |
+| google/gemma-2-9b           | /18.42 GB/       | **6.79 GB**       |
+| google/gemma-2-27b          | 53.27 GB         | /16.88 GB/        |
 * PEFT features
 ** Flexibility when it comes to models and adapter methods
 #+attr_reveal: :frag (frag-style)
