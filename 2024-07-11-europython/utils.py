@@ -64,7 +64,7 @@ def get_num_params(param):  # from PEFT
     return num_params
 
 
-def get_param_count(model_id, rank):
+def get_param_count(model_id, rank, train_embedding=False):
     """Get the number of parameters in a model, including LoRA parameters"""
     # this is only an approximation because we ignore buffers
     model = create_empty_model(model_id, "transformers")
@@ -79,6 +79,9 @@ def get_param_count(model_id, rank):
             key = f"{module_name}.{param_name}"
             count_params[key] += get_num_params(param)
             if key == "Linear.weight":
+                m, n = param.shape
+                count_params[LORA] += m * rank + n * rank
+            elif (key == "Embedding.weight") and train_embedding:
                 m, n = param.shape
                 count_params[LORA] += m * rank + n * rank
     count_params = dict(count_params)
@@ -125,7 +128,7 @@ def get_training_memory_estimate(num_bytes):
     }
 
 
-def main(model_id, rank, dtype, sink=print):
+def main(model_id, rank, dtype, sink=print, train_embedding=False):
     """Main function to calculate memory requirements of a model.
 
     Outputs the results in JSON format.
@@ -136,7 +139,7 @@ def main(model_id, rank, dtype, sink=print):
         dtype (str): Data type, one of float32, float16, bfloat16, int8, int4
         sink (function): Function to print the result with (default: print).
     """
-    count_params = get_param_count(model_id, rank=rank)
+    count_params = get_param_count(model_id, rank=rank, train_embedding=train_embedding)
     num_bytes = get_param_bytes(count_params, dtype=dtype)
     num_bytes_readable = {k: convert_bytes(v) for k, v in num_bytes.items()}
     total_params = sum(v for k, v in count_params.items() if k != LORA)
@@ -176,6 +179,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("model_id", type=str, help="Model name (on Hugging Face)")
     parser.add_argument("--rank", type=int, default=8, help="Rank of LoRA adapter")
+    parser.add_argument("--train_embedding", action="store_true", help="Whether to train embedding layer")
     parser.add_argument("--dtype", type=str, default="float32", help="Data type, one of float32, float16, bfloat16, int8, int4")
     args = parser.parse_args()
-    main(args.model_id, rank=args.rank, dtype=args.dtype)
+    main(args.model_id, rank=args.rank, dtype=args.dtype, train_embedding=args.train_embedding)
