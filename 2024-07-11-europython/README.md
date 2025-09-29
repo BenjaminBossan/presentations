@@ -2,7 +2,9 @@
 
 [2024-07-11, 12:30 - 13:00, Forum Hall](https://ep2024.europython.eu/session/fine-tuning-large-models-on-local-hardware)
 
-[Slides (rendered on GitHub)](https://github.com/BenjaminBossan/presentations/blob/master/2024-07-11-europython/presentation.org).
+[Slides (rendered on GitHub)](https://github.com/BenjaminBossan/presentations/blob/master/2024-07-11-europython/presentation.org)
+
+[Talk video (YouTube)](https://youtu.be/hdHKCjhF68U)
 
 ## Abstract
 
